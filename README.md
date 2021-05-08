@@ -10,4 +10,5 @@ For a quick overview, start with the [tutorial notebook](https://github.com/Jori
 * Statsmodels 
 * KDEpy (using FFTKDE for kernel density estimate.)
 * Seaborn (alternative for kernel density estimate)
+
 This project is written in Python 3. 
