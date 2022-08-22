@@ -1,7 +1,6 @@
 import torch
 from enum import Enum
-from dataclasses import dataclass, field
-from sqlite3 import PrepareProtocol
+from dataclasses import dataclass
 
 
 @dataclass
