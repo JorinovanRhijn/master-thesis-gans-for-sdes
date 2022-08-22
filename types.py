@@ -1,3 +1,4 @@
+import torch
 from enum import Enum
 from dataclasses import dataclass, field
 from sqlite3 import PrepareProtocol
@@ -34,13 +35,13 @@ class MetaParameters:
     # at sigmoid
     negative_slope: float  # Negative slope for leaky_relu activation
     proc_type: PreProcessing  # pre-processing type
-    device: torch.device
+    device: torch.DeviceObjType
     beta1: float  # Adam beta_1
     beta2: float  # Adam beta_2
     lr_G: float  # base learning rate of the generator
     lr_D: float  # base learning rate of the discriminator
     n_D: int  # number of discriminator iterations per generator iteration, fixed to 1 for supervised GAN
-    supervised: bool # by default, use a vanilla GAN
+    supervised: bool  # by default, use a vanilla GAN
     seed: int
     save_figs: bool
     save_iter_plot: bool
