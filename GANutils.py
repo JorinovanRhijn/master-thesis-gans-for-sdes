@@ -1,19 +1,20 @@
-# Jorino van Rhijn 
-# Monte Carlo Simulation of SDEs with GANs 
+# Jorino van Rhijn
+# Monte Carlo Simulation of SDEs with GANs
 
 import scipy.stats as stat
 import numpy as np 
 import torch
 import pickle
 
-def get_activation(key,negative_slope=0.1,*args,**kwargs):
-    # Check if negative slope is given as argument 
+
+def get_activation(key, negative_slope=0.1, *args, **kwargs):
+    # Check if negative slope is given as argument
     if negative_slope in list(kwargs.keys()):
         negative_slope = kwargs['negative_slope']
     if key is None:
         # return identity function
         return lambda x: x
-    choices = ['relu','leaky_relu','tanh','sigmoid','sine']
+    choices = ['relu', 'leaky_relu', 'tanh', 'sigmoid', 'sine']
     if key == choices[0]:
         return torch.relu
     elif key == choices[1]:
@@ -25,7 +26,7 @@ def get_activation(key,negative_slope=0.1,*args,**kwargs):
     elif key == choices[4]:
         return torch.sin
     elif key is None or key == 'None':
-        # Return identity 
+        # Return identity
         return lambda x: x
     else:
         raise ValueError('Activation type not implemented or understood. \n Possible choices are:%s'%str(choices))

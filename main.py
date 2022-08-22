@@ -1,46 +1,40 @@
-# Jorino van Rhijn 
-# Monte Carlo Simulation of SDEs with GANs 
+# Jorino van Rhijn
+# Monte Carlo Simulation of SDEs with GANs
 
-from matplotlib.lines import Line2D
-from mpl_toolkits.mplot3d import Axes3D
-import matplotlib.pyplot as plt
-import seaborn as sns
-import numpy as np 
 import torch
-import time 
+import time
 import os
+import numpy as np
 import os.path as pt
 import torch.nn as nn
 import torch.optim as optim
+import pandas as pd
 import statsmodels.distributions as smd
 import scipy.stats as stat
-from scipy.stats import entropy
-import pandas as pd
 
-# Import custom modules 
 from CGANalysis import CGANalysis
-from GANutils import input_sample, count_layers, append_gradients, dict_to_tensor, make_test_tensor, preprocess, postprocess,\
-pickle_it, unpickle
-from SDE_Dataset import SDE_Dataset, load_preset
+from GANutils import input_sample, count_layers, append_gradients, dict_to_tensor,\
+    make_test_tensor, preprocess, postprocess, pickle_it
+from SDE_Dataset import load_preset
 from train_step import step_handler
-from nets import Generator, Discriminator 
+from nets import Generator, Discriminator
 
 # GLOBAL VARIABLES
 
 # Manage directory to save results 
 DIR = pt.dirname(pt.abspath(__file__))
-DEFAULT_DIR = pt.join(DIR,'train_results')
+DEFAULT_DIR = pt.join(DIR, 'train_results')
 if not pt.exists(DEFAULT_DIR):
     os.mkdir(DEFAULT_DIR)
 
-# Initialise the RNG 
+# Initialise the RNG
 SEED = 0
-CUDA = True 
+CUDA = True
 
-# Use GPU if CUDA set to True and GPU is available 
+# Use GPU if CUDA set to True and GPU is available
 DEVICE = torch.device('cuda:0' if (torch.cuda.is_available() & CUDA) else 'cpu')
 
-# Define all metaparameters in dict 
+# Define all metaparameters in dict
 META = dict(#
     c_lr=1.05, # factor by which the learning rate is divided every cut_lr_evert iterations 
     cut_lr_every = 500, 
@@ -74,33 +68,32 @@ torch.manual_seed(SEED)
 np.random.seed(seed=SEED)
 
 
-def train_GAN(netD,netG,data,meta,netD_Mil=None):  
+def train_GAN(netD, netG, data, meta, netD_Mil=None):
     '''
     Training loop: train_GAN(netD,netG,data,meta)
-    Inspired by several tricks from DCGAN PyTorch tutorial. 
+    Inspired by several tricks from DCGAN PyTorch tutorial.
     '''
 
-    #-------------------------------------------------------
-    # Initialisation 
-    #-------------------------------------------------------    
+    # -------------------------------------------------------
+    # Initialisation
+    # -------------------------------------------------------
 
     real_label = 1
-    fake_label = 0    
-    GANloss = nn.BCELoss() 
+    fake_label = 0
+    GANloss = nn.BCELoss()
 
     GAN_step = step_handler(supervised_bool=meta['supervised'], CGAN_bool=data.CGAN)
 
-    # Initialise lists for logging   
+    # Initialise lists for logging
     D_losses = []
     G_losses = []
     times = []
     wasses = []
     ksstat = []
-    delta_ts_passed = []
     D_grads = []
     G_grads = []
 
-    # Short handle for training params 
+    # Short handle for training params
     c_lr = meta['c_lr']
     cut_lr_every = meta['cut_lr_every']
     epochs = meta['epochs']
@@ -133,15 +126,15 @@ def train_GAN(netD,netG,data,meta,netD_Mil=None):
     iters = 0
     plot_iter = 0
 
-    # Get the amount of batches implied by training set size and batch_size 
-    n_batches = data.N//b_size
+    # Get the amount of batches implied by training set size and batch_size
+    n_batches = data.N // b_size
 
-    optG = optim.Adam(netG.parameters(),lr=meta['lr_G'],betas=(meta['beta1'],meta['beta2']))
-    optD = optim.Adam(netD.parameters(),lr=meta['lr_D'],betas=(meta['beta1'],meta['beta2']))
+    optG = optim.Adam(netG.parameters(), lr=meta['lr_G'], betas=(meta['beta1'], meta['beta2']))
+    optD = optim.Adam(netD.parameters(), lr=meta['lr_D'], betas=(meta['beta1'], meta['beta2']))
 
-    #-------------------------------------------------------
-    # Start training loop 
-    #-------------------------------------------------------
+    # -------------------------------------------------------
+    # Start training loop
+    # -------------------------------------------------------
     
     for epoch in range(epochs):
         tick0 = time.time()    
@@ -150,30 +143,41 @@ def train_GAN(netD,netG,data,meta,netD_Mil=None):
                 optG.param_groups[0]['lr'] = optG.param_groups[0]['lr']/c_lr
 
             # Sample random minibatch from training set with replacement
-            indices = np.array((np.random.rand(b_size)*data.N),dtype=int)
+            indices = np.array((np.random.rand(b_size)*data.N), dtype=int)
             # Uncomment to sample minibatch from training set without replacement
             # indices = np.arange(i*b_size,(i+1)*b_size)
 
-            # Get data batch based on indices 
-            X_i = data.exact[indices,:].to(device)
-            C_i = C_tensors[indices,:].to(device) if data.CGAN else None
-            Z_i = data.Z[indices,:].to(device) if meta['supervised'] else None
+            # Get data batch based on indices
+            X_i = data.exact[indices, :].to(device)
+            C_i = C_tensors[indices, :].to(device) if data.CGAN else None
+            Z_i = data.Z[indices, :].to(device) if meta['supervised'] else None
+
+            # -------------------------------------------------------
+            # GAN training step
+            # -------------------------------------------------------
+
+            errD, errG, D_x, D_G_z1, D_G_z2 = GAN_step(netD,
+                                                       netG,
+                                                       optD,
+                                                       optG,
+                                                       GANloss,
+                                                       device,
+                                                       X_i=X_i,
+                                                       C_i=C_i,
+                                                       Z_i=Z_i,
+                                                       real_label=real_label,
+                                                       fake_label=fake_label,
+                                                       n_D=meta['n_D'])
 
             #-------------------------------------------------------
-            # GAN training step 
-            #-------------------------------------------------------
-
-            errD,errG,D_x,D_G_z1,D_G_z2 = GAN_step(netD,netG,optD,optG,GANloss,device,X_i=X_i,C_i=C_i,Z_i=Z_i,real_label=real_label,fake_label=fake_label,n_D=meta['n_D'])
-
-            #-------------------------------------------------------            
 
             # Output training stats
-            if (iters % 100 == 0) and  (i % b_size) == 0:
+            if (iters % 100 == 0) and (i % b_size) == 0:
                 print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
                       % (epoch, epochs, i, data.N//b_size,
                          errD.item(), errG.item(), D_x, D_G_z1, D_G_z2))
-                input_G = input_sample(data.N_test,C=C_test,device=device)
-                fake = postprocess(netG(input_G).detach().view(-1),{**data.params,**data.C_test}['S0'],proc_type=proc_type,\
+                input_G = input_sample(data.N_test, C=C_test, device=device)
+                fake = postprocess(netG(input_G).detach().view(-1), {**data.params, **data.C_test}['S0'], proc_type=proc_type,\
                     S_ref=torch.tensor(data.params['S_bar'],device=meta['device'],dtype=torch.float32),eps=meta['eps']).cpu().view(-1).numpy()
                 ecdf_fake = smd.ECDF(fake)
                 ecdf_test = smd.ECDF(data.exact_test.view(-1))
@@ -220,7 +224,7 @@ def train_GAN(netD,netG,data,meta,netD_Mil=None):
         for key in list(data.C.keys()):
             C_ranges[key] = (min(data.C[key]),max(data.C[key]))
 
-    # Create dict for output log 
+    # Create dict for output log
     output_dict = dict(
         iterations=np.arange(1,iters+1),
         iters=itervec,
@@ -269,7 +273,7 @@ def train_GAN(netD,netG,data,meta,netD_Mil=None):
 
 def main():
     # Supervised GAN? 
-    options = [False,True]
+    options = [False, True]
     # Alternative: run over different pre-processing types, comment the above line and uncomment the one below
     # options = [None,'returns','logreturns','scale_S_ref']    
 

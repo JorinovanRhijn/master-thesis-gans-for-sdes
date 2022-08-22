@@ -16,7 +16,7 @@ from matplotlib.legend_handler import HandlerLine2D, HandlerTuple
 
 
 class CGANalysis():
-    def __init__(self,data,D,G,SDE='CIR',method='iid_Z',save_all_figs=False,results_path=None,proc_type=None,plotstyle='default',eps=1e-8,supervised=False,device=None):
+    def __init__(self, data, D, G, SDE='CIR', method='iid_Z', save_all_figs=False, results_path=None, proc_type=None, plotstyle='default', eps=1e-8, supervised=False, device=None):
 
         # Create a grid on the problem domain for plotting 
         # a = data.exact_test.min().item() - 0.1*np.abs(data.exact_test.min().item())
@@ -34,7 +34,7 @@ class CGANalysis():
 
         # Default parameters
         plt.style.use(plotstyle)
-        self.x = np.linspace(a,b,1000)
+        self.x = np.linspace(a, b, 1000)
         self.N = data.N
         self.N_test = data.N_test
         self.C_test = data.C_test.copy()
@@ -43,15 +43,15 @@ class CGANalysis():
         self.proc_type = proc_type
         self.save_all_figs = save_all_figs
         self.results_path = results_path
-        self.fixed_noise = torch.randn((self.N_test,1),device=self.device)
+        self.fixed_noise = torch.randn((self.N_test, 1), device=self.device)
         self.CGAN = data.CGAN
         self.eps = eps
 
-        # Save pointers to networks 
+        # Save pointers to networks
         self.D = D
         self.G = G
 
-        # Copy dataset parameters, as the class writes to them 
+        # Copy dataset parameters, as the class writes to them
         self.params = data.params.copy()
 
         # Case discriminator informed with Z
@@ -59,7 +59,7 @@ class CGANalysis():
 
         # Set default file extension to pdf
         self.format = 'pdf'
-        
+
         # Make the exact pdf, cdf and sampling scheme available as methods
         if self.SDE == 'GBM':
             self.exact_cdf = data.exact_cdf_GBM
