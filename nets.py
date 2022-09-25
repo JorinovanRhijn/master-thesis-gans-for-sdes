@@ -71,8 +71,10 @@ class Discriminator(nn.Module):
         return x
 
 
-def load_Generator(path, c_dim=0, hidden_dim=200, activation='leaky_relu', output_activation=None, device='cpu', **kwargs):
-    netG = Generator(c_dim=c_dim, hidden_dim=hidden_dim, activation=activation, output_activation=output_activation, **kwargs).to(device)
+def load_Generator(path, c_dim=0, hidden_dim=200, activation='leaky_relu', output_activation=None, device='cpu',
+                   **kwargs):
+    netG = Generator(c_dim=c_dim, hidden_dim=hidden_dim, activation=activation, output_activation=output_activation,
+                     **kwargs).to(device)
     checkpoint_G = torch.load(path)
     netG.load_state_dict(checkpoint_G)
     return netG

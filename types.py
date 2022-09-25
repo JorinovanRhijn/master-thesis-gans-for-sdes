@@ -1,4 +1,3 @@
-import torch
 from enum import Enum
 from dataclasses import dataclass
 
@@ -29,12 +28,11 @@ class MetaParameters:
     preset: str  # 'CIR_Feller_violated_high_gamma'
     N_train: int
     N_test: int
-    activation: Activation
-    output_activation: Activation  # output activation of the generator, discriminator activation currently fixed
+    activation: str
+    output_activation: str  # output activation of the generator, discriminator activation currently fixed
     # at sigmoid
     negative_slope: float  # Negative slope for leaky_relu activation
-    proc_type: PreProcessing  # pre-processing type
-    device: torch.DeviceObjType
+    proc_type: str  # pre-processing type
     beta1: float  # Adam beta_1
     beta2: float  # Adam beta_2
     lr_G: float  # base learning rate of the generator

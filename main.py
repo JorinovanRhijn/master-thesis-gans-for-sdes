@@ -15,13 +15,13 @@ import scipy.stats as stat
 from CGANalysis import CGANalysis
 from GANutils import input_sample, count_layers, append_gradients, dict_to_tensor,\
     make_test_tensor, preprocess, postprocess, pickle_it
-from SDE_Dataset import load_preset
 from train_step import step_handler
 from nets import Generator, Discriminator
+from presets import load_preset
 
 # GLOBAL VARIABLES
 
-# Manage directory to save results 
+# Manage directory to save results
 DIR = pt.dirname(pt.abspath(__file__))
 DEFAULT_DIR = pt.join(DIR, 'train_results')
 if not pt.exists(DEFAULT_DIR):
@@ -30,9 +30,6 @@ if not pt.exists(DEFAULT_DIR):
 # Initialise the RNG
 SEED = 0
 CUDA = True
-
-# Use GPU if CUDA set to True and GPU is available
-DEVICE = torch.device('cuda:0' if (torch.cuda.is_available() & CUDA) else 'cpu')
 
 # Define all metaparameters in dict
 META = dict(#
@@ -63,6 +60,9 @@ META = dict(#
     results_path=DEFAULT_DIR,
     plot_interval = 500,
     )
+
+# Use GPU if CUDA set to True and GPU is available
+DEVICE = torch.device('cuda:0' if (torch.cuda.is_available() & CUDA) else 'cpu')
 
 torch.manual_seed(SEED)
 np.random.seed(seed=SEED)

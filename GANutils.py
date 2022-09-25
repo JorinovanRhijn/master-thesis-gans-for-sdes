@@ -1,13 +1,12 @@
 # Jorino van Rhijn
 # Monte Carlo Simulation of SDEs with GANs
 
-import scipy.stats as stat
-import numpy as np 
+import numpy as np
 import torch
 import pickle
 
 
-def get_activation(key, negative_slope=0.1, *args, **kwargs):
+def get_activation(key, negative_slope=0.1, **kwargs):
     # Check if negative slope is given as argument
     if negative_slope in list(kwargs.keys()):
         negative_slope = kwargs['negative_slope']
@@ -31,14 +30,17 @@ def get_activation(key, negative_slope=0.1, *args, **kwargs):
     else:
         raise ValueError('Activation type not implemented or understood. \n Possible choices are:%s'%str(choices))
 
+
 def pickle_it(data,path):
     with open(path,'wb') as f:
         pickle.dump(data,f,protocol=pickle.HIGHEST_PROTOCOL)
+
 
 def unpickle(path):
     with open(path,'rb') as f:
         data = pickle.load(f)
     return data
+
 
 def count_layers(net):
     '''
@@ -49,6 +51,7 @@ def count_layers(net):
         if (p.requires_grad) and ("bias" not in n):
             k += 1
     return k
+
 
 def standardise(T,):
     return (T-T.mean())/T.std()
@@ -88,6 +91,7 @@ def dict_to_tensor(D,device=torch.device('cpu')):
             T = torch.cat((T,torch.tensor(v,dtype=torch.float32,device=device).view(-1,1)),axis=1)
         return T
 
+
 def make_test_tensor(C_test,N_test,device='cpu'):
     '''
     Given dict of scalars C_test, outputs a tensor of size [N_test,num_conditions]
@@ -99,6 +103,7 @@ def make_test_tensor(C_test,N_test,device='cpu'):
         assert not hasattr(v,'__len__'), 'Test conditions must be scalars.'
         T[:,i] *= v
     return T
+
 
 def append_gradients(D,G,Dgrads,Ggrads):
     '''
@@ -114,7 +119,8 @@ def append_gradients(D,G,Dgrads,Ggrads):
     for n,p in G.named_parameters():
         if(p.requires_grad) and ("bias" not in n):
             Ggrads[k].append(p.grad.abs().mean().item())
-            k += 1  
+            k += 1
+
 
 def make_GAN_paths(data,G,n_steps,C=None,Z=None,N_paths=None,proc_type=None,device='cpu'):
     '''
@@ -179,6 +185,7 @@ def preprocess(X_next,X_prev,proc_type=None,K=1,S_ref=None,eps=1e-8):
     elif proc_type == 'scale_S_ref':
         R = X_next/S_ref-1
         return R
+
 
 def postprocess(R,X_prev,proc_type=None,K=1,S_ref=None,delta_t=None,eps=1e-8):
     '''

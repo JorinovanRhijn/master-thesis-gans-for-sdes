@@ -1,27 +1,24 @@
-# Jorino van Rhijn 
-# Monte Carlo Simulation of SDEs with GANs 
+# Jorino van Rhijn
+# Monte Carlo Simulation of SDEs with GANs
 
+import os
 import torch
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
-import pandas as pd
 import statsmodels.distributions as smd
+import scipy.stats as stat
 from GANutils import input_sample, count_layers, make_test_tensor, postprocess, preprocess
 from KDEpy import FFTKDE
-import scipy.stats as stat
-import os
-import os.path as pt
-from matplotlib.legend_handler import HandlerLine2D, HandlerTuple
+from matplotlib.legend_handler import HandlerTuple
 
 
 class CGANalysis():
-    def __init__(self, data, D, G, SDE='CIR', method='iid_Z', save_all_figs=False, results_path=None, proc_type=None, plotstyle='default', eps=1e-8, supervised=False, device=None):
+    def __init__(self, data, D, G, SDE='CIR', method='iid_Z', save_all_figs=False, results_path=None, proc_type=None,
+                 plotstyle='default', eps=1e-8, supervised=False, device=None):
 
-        # Create a grid on the problem domain for plotting 
-        # a = data.exact_test.min().item() - 0.1*np.abs(data.exact_test.min().item())
-        # b = data.exact_test.max().item() + 0.1*np.abs(data.exact_test.max().item())
-        a,b = self.get_plot_bounds(data.exact.numpy())
+        # Create a grid on the problem domain for plotting
+        a, b = self.get_plot_bounds(data.exact.numpy())
         if SDE == 'GBM':
             a = 0
         elif SDE == 'CIR':
@@ -75,19 +72,18 @@ class CGANalysis():
     @staticmethod
     def get_plot_bounds(X):
         '''
-        Get plotting domain based on a sample of data. Alternative to autoscaling. 
-
-        Input: numpy array X with samples from distribution of interest 
+        Get plotting domain based on a sample of data. Alternative to autoscaling
+        Input: numpy array X with samples from distribution of interest
         '''
         a = X.min()-0.1*np.abs(X.min())
         b = X.max()+0.1*np.abs(X.max())
-        a = np.min((a,b))
-        b = np.max((a,b))
+        a = np.min((a, b))
+        b = np.max((a, b))
         if a == b:
-            a -= 1e-20 # Prevent situation a=b if both are 0
-        return a,b
+            a -= 1e-20  # Prevent situation a=b if both are 0
+        return a, b
 
-    def get_exact_pdf(self,params):
+    def get_exact_pdf(self, params):
         '''
         Get bound method of pdf corresponding to self.SDE
         '''
@@ -98,7 +94,7 @@ class CGANalysis():
         else:
             raise Exception(f'SDE type \'{self.SDE}\' not supported or not understood.')
 
-    def get_exact_cdf(self,params):
+    def get_exact_cdf(self, params):
         '''
         Get bound method of cdf corresponding to self.SDE
         '''
@@ -108,8 +104,8 @@ class CGANalysis():
             return self.exact_cdf(params)
         else:
             raise Exception(f'SDE type \'{self.SDE}\' not supported or not understood.')
-            
-    def ecdf_plot(self,C=None,G=None,params=None,save=False,filename=None,raw_output=False,save_format=None,x_plot=None,legendname=None,grid=False):
+
+    def ecdf_plot(self, C=None, G=None, params=None, save=False, filename=None, raw_output=False, save_format=None, x_plot=None, legendname=None, grid=False):
         '''
         Plotting function that creates [ECDF plot]. 
         '''
@@ -120,7 +116,7 @@ class CGANalysis():
         if G is None:
             G = self.G
         if self.CGAN:
-            params = {**params,**self.C_test}
+            params = {**params, **self.C_test}
             assert self.CGAN and (G.c_dim > 0), 'Generator appears not to be trained as a CGAN, while CGAN is toggled.'
             assert len(C) == 1, 'Only one plot condition is supported. To fix other parameters, specify them in self.C_test'
         if save_format is None:
@@ -775,4 +771,3 @@ class CGANalysis():
             plt.close()
         else:
             plt.show()
-        
