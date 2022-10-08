@@ -4,7 +4,7 @@
 import numpy as np
 import torch
 import scipy.stats as stat
-from GANutils import standardise
+from utils import standardise
 
 
 class SDEDataset():

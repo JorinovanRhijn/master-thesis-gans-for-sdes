@@ -13,7 +13,7 @@ import statsmodels.distributions as smd
 import scipy.stats as stat
 
 from CGANalysis import CGANalysis
-from GANutils import input_sample, count_layers, append_gradients, dict_to_tensor,\
+from utils import input_sample, count_layers, append_gradients, dict_to_tensor,\
     make_test_tensor, preprocess, postprocess, pickle_it
 from train_step import step_handler
 from nets import Generator, Discriminator

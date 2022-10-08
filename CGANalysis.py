@@ -8,7 +8,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import statsmodels.distributions as smd
 import scipy.stats as stat
-from GANutils import input_sample, count_layers, make_test_tensor, postprocess, preprocess
+from utils import input_sample, count_layers, make_test_tensor, postprocess, preprocess
 from KDEpy import FFTKDE
 from matplotlib.legend_handler import HandlerTuple
 

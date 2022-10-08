@@ -2,7 +2,7 @@
 # Monte Carlo Simulation of SDEs with GANs 
 
 import torch
-from GANutils import input_sample
+from utils import input_sample
 
 # Module containing GAN training step methods for the unconditional GAN and conditional GAN in both vanilla supervised form. 
 

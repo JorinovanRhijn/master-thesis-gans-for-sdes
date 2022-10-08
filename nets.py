@@ -3,11 +3,34 @@
 
 import torch
 import torch.nn as nn
-from GANutils import get_activation
+
+
+def get_activation(key: str, negative_slope: float = 0.1, **kwargs):
+    # Check if negative slope is given as argument
+    if negative_slope in list(kwargs.keys()):
+        negative_slope = kwargs['negative_slope']
+    if key is None:
+        # return identity function
+        return lambda x: x
+    choices = ['relu', 'leaky_relu', 'tanh', 'sigmoid', 'sine']
+    if key == choices[0]:
+        return torch.relu
+    elif key == choices[1]:
+        return torch.nn.LeakyReLU(negative_slope=negative_slope)
+    elif key == choices[2]:
+        return torch.tanh
+    elif key == choices[3]:
+        return torch.sigmoid
+    elif key == choices[4]:
+        return torch.sin
+    elif key is None or key == 'None':
+        # Return identity
+        return lambda x: x
+    else:
+        raise ValueError('Activation type not implemented or understood. \n Possible choices are:%s' % str(choices))
+
 
 # Basic feed-forward conditioanl GAN architecture
-
-
 class Generator(nn.Module):
     def __init__(self, c_dim=None, hidden_dim=200, activation='leaky_relu', output_activation=None, eps=1e-20, **kwargs):
         super(Generator, self).__init__()
