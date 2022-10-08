@@ -1,7 +1,6 @@
 import os
 from enum import Enum, auto
 from dataclasses import dataclass
-from nets import get_activation
 
 
 @dataclass
@@ -20,6 +19,15 @@ class PreProcessing(Enum):
 
 
 @dataclass
+class Activation(Enum):
+    RELU = auto()
+    LEAKY_RELU = auto()
+    TANH = auto()
+    SIGMOID = auto()
+    SINE = auto()
+
+
+@dataclass
 class NetParameters:
     eps: float  # small number added to logreturns and generator output to prevent exactly reaching 0
     hidden_dim: int
@@ -28,12 +36,22 @@ class NetParameters:
     generator_output_activation_str: str
 
     @property
-    def activation(self) -> callable:
-        return get_activation(self.activation_str)
+    def activation(self) -> Activation:
+        _acts = dict(relu=Activation.RELU,
+                     leaky_relu=Activation.LEAKY_RELU,
+                     tanh=Activation.TANH,
+                     sigmoid=Activation.SIGMOID,
+                     since=Activation.SINE)
+        return _acts.get(self.activation_str, None)
 
     @property
     def generator_output(self) -> callable:
-        return get_activation(self.generator_output_activation_str)
+        _acts = dict(relu=Activation.RELU,
+                     leaky_relu=Activation.LEAKY_RELU,
+                     tanh=Activation.TANH,
+                     sigmoid=Activation.SIGMOID,
+                     since=Activation.SINE)
+        return _acts.get(self.activation_str, None)
 
 
 @dataclass
@@ -76,14 +94,14 @@ class MetaParameters:
                         cir_feller_satisfied=Preset.CIR_FELLER_SATISFIED,
                         cir_feller_violated_low_gamma=Preset.CIR_FELLER_VIOLATED_LOW_GAMMA,
                         cir_feller_violated_high_gamma=Preset.CIR_FELLER_VIOLATED_HIGH_GAMMA,)
-        return _presets[self.preset_str]
+        return _presets.get(self.preset_str, None)
 
     @property
     def proc_type(self):
         _proc_types = dict(scale_S_ref=PreProcessing.SCALE_S_REF,
                            returns=PreProcessing.RETURNS,
                            logreturns=PreProcessing.LOGRETURNS)
-        return _proc_types[self.proc_type_str]
+        return _proc_types.get(self.proc_type_str, None)
 
 
 @dataclass

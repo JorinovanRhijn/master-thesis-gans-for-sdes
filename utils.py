@@ -107,7 +107,6 @@ def append_gradients(D: Discriminator, G: Generator, D_grads: list, G_grads: lis
 def preprocess(X_next: torch.Tensor,
                X_prev: torch.Tensor,
                proc_type: PreProcessing = None,
-               K: float = 1,
                S_ref: float = None,
                eps: float = 1e-8):
     '''
@@ -116,7 +115,7 @@ def preprocess(X_next: torch.Tensor,
     '''
     if proc_type is None:
         return X_next
-    assert isinstance(proc_type, PreProcessing),  f'proc_type must be one of \
+    assert isinstance(proc_type, PreProcessing), f'proc_type must be one of \
     {PreProcessing._member_names_}'
     if proc_type is PreProcessing.LOGRETURNS:
         return torch.log(X_next / X_prev + eps)
@@ -130,7 +129,6 @@ def preprocess(X_next: torch.Tensor,
 def postprocess(R: torch.Tensor,
                 X_prev: torch.Tensor,
                 proc_type: PreProcessing = None,
-                K: float = 1,
                 S_ref: float = None,
                 eps: float = 1e-8):
     '''
@@ -139,7 +137,7 @@ def postprocess(R: torch.Tensor,
     '''
     if proc_type is None:
         return R
-    assert isinstance(proc_type, PreProcessing),  f'proc_type must be one of \
+    assert isinstance(proc_type, PreProcessing), f'proc_type must be one of \
     {PreProcessing._member_names_}'
     if proc_type is PreProcessing.LOGRETURNS:
         return X_prev*torch.exp(R) + eps

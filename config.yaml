@@ -1,5 +1,5 @@
 net_parameters:
-    eps: 1e-20
+    eps: 0.00000000000000000000000000000000000000000000000000000000001
     hidden_dim: 200
     negative_slope: 0.1
     activation_str: 'leaky_relu'
@@ -19,7 +19,7 @@ train_parameters:
     n_D: 2
 
 meta_parameters:
-    preset_str: 'CIR_Feller_violated_high_gamma'
+    preset_str: 'cir_feller_violated_high_gamma'
     proc_type_str: 'scale_S_ref'
     supervised: False
     seed: 42
@@ -27,6 +27,5 @@ meta_parameters:
     save_iter_plot: False
     report: False
     plot_interval: int
-    seed: int
     output_name: 'output'
     enable_cuda: True

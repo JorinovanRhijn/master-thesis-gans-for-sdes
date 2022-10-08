@@ -3,36 +3,43 @@
 
 import torch
 import torch.nn as nn
+from data_types import Activation
 
 
-def get_activation(key: str, negative_slope: float = 0.1, **kwargs):
-    # Check if negative slope is given as argument
+def get_activation(key: Activation, negative_slope: float = 0.1, **kwargs):
+
     if negative_slope in list(kwargs.keys()):
         negative_slope = kwargs['negative_slope']
     if key is None:
         # return identity function
         return lambda x: x
-    choices = ['relu', 'leaky_relu', 'tanh', 'sigmoid', 'sine']
-    if key == choices[0]:
+    if key is Activation.RELU:
         return torch.relu
-    elif key == choices[1]:
+    elif key is Activation.LEAKY_RELU:
         return torch.nn.LeakyReLU(negative_slope=negative_slope)
-    elif key == choices[2]:
+    elif key is Activation.TANH:
         return torch.tanh
-    elif key == choices[3]:
+    elif key is Activation.SIGMOID:
         return torch.sigmoid
-    elif key == choices[4]:
+    elif key is Activation.SINE:
         return torch.sin
-    elif key is None or key == 'None':
+    elif key == 'None':
         # Return identity
         return lambda x: x
     else:
-        raise ValueError('Activation type not implemented or understood. \n Possible choices are:%s' % str(choices))
+        raise ValueError('Activation type not implemented or understood. \n Possible choices are:%s'
+                         % str(Activation._member_names_))
 
 
 # Basic feed-forward conditioanl GAN architecture
 class Generator(nn.Module):
-    def __init__(self, c_dim=None, hidden_dim=200, activation='leaky_relu', output_activation=None, eps=1e-20, **kwargs):
+    def __init__(self,
+                 c_dim=None,
+                 hidden_dim=200,
+                 activation=Activation.LEAKY_RELU,
+                 output_activation=None,
+                 eps=1e-20,
+                 **kwargs):
         super(Generator, self).__init__()
 
         # Select activation functions
@@ -66,7 +73,11 @@ class Generator(nn.Module):
 
 
 class Discriminator(nn.Module):
-    def __init__(self, c_dim=None, hidden_dim=200, activation='leaky_relu', **kwargs):
+    def __init__(self,
+                 c_dim=None,
+                 hidden_dim=200,
+                 activation=Activation.LEAKY_RELU,
+                 **kwargs):
         super(Discriminator, self).__init__()
 
         # Select activation function
@@ -94,7 +105,12 @@ class Discriminator(nn.Module):
         return x
 
 
-def load_Generator(path, c_dim=0, hidden_dim=200, activation='leaky_relu', output_activation=None, device='cpu',
+def load_Generator(path,
+                   c_dim=0,
+                   hidden_dim=200,
+                   activation=Activation.LEAKY_RELU,
+                   output_activation=None,
+                   device='cpu',
                    **kwargs):
     netG = Generator(c_dim=c_dim, hidden_dim=hidden_dim, activation=activation, output_activation=output_activation,
                      **kwargs).to(device)
@@ -103,7 +119,7 @@ def load_Generator(path, c_dim=0, hidden_dim=200, activation='leaky_relu', outpu
     return netG
 
 
-def load_Discriminator(path, c_dim=0, hidden_dim=200, activation='leaky_relu', device='cpu', **kwargs):
+def load_Discriminator(path, c_dim=0, hidden_dim=200, activation=Activation.LEAKY_RELU, device='cpu', **kwargs):
     netD = Discriminator(c_dim=c_dim, hidden_dim=hidden_dim, activation=activation, **kwargs).to(device)
     checkpoint_D = torch.load(path)
     netD.load_state_dict(checkpoint_D)
