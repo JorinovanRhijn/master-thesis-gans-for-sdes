@@ -26,6 +26,6 @@ meta_parameters:
     save_figs: False
     save_iter_plot: False
     report: False
-    plot_interval: int
+    plot_interval: 500
     output_name: 'output'
     enable_cuda: True

@@ -251,7 +251,7 @@ def train_GAN(netD: Discriminator, netG: Generator, data: SDEDataset):
 
 
 def main():
-    # Supervised GAN? 
+    # Supervised GAN?
     options = [False, True]
     # Alternative: run over different pre-processing types, comment the above line and uncomment the one below
     # options = [None,'returns','logreturns','scale_S_ref']

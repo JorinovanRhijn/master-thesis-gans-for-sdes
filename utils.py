@@ -143,6 +143,6 @@ def postprocess(R: torch.Tensor,
         return X_prev*torch.exp(R) + eps
     elif proc_type is PreProcessing.RETURNS:
         return X_prev*(1+R)
-    elif proc_type is PreProcessing.LOGRETURNS:
+    elif proc_type is PreProcessing.SCALE_S_REF:
         X_next = torch.abs((R+1)*S_ref)
         return X_next

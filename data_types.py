@@ -50,7 +50,8 @@ class NetParameters:
                      leaky_relu=Activation.LEAKY_RELU,
                      tanh=Activation.TANH,
                      sigmoid=Activation.SIGMOID,
-                     since=Activation.SINE)
+                     since=Activation.SINE,
+                     )
         return _acts.get(self.activation_str, None)
 
 

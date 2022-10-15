@@ -19,7 +19,6 @@ class SDEDataset():
         self.params = dict(t=1, S0=1, S0_test=1, mu=0.05, sigma=0.2, kappa=0.5, S_bar=1, gamma=0.1, s=0)
         self.CGAN = False
         self.C = None
-        self.C_Mil = None
         self.C_test = None
 
     def condition_init(self, C=None, C_test=None):

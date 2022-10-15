@@ -6,24 +6,24 @@ import torch.nn as nn
 from data_types import Activation
 
 
-def get_activation(key: Activation, negative_slope: float = 0.1, **kwargs):
+def get_activation(act: Activation, negative_slope: float = 0.1, **kwargs):
 
     if negative_slope in list(kwargs.keys()):
         negative_slope = kwargs['negative_slope']
-    if key is None:
+    if act is None:
         # return identity function
         return lambda x: x
-    if key is Activation.RELU:
+    if act is Activation.RELU:
         return torch.relu
-    elif key is Activation.LEAKY_RELU:
+    elif act is Activation.LEAKY_RELU:
         return torch.nn.LeakyReLU(negative_slope=negative_slope)
-    elif key is Activation.TANH:
+    elif act is Activation.TANH:
         return torch.tanh
-    elif key is Activation.SIGMOID:
+    elif act is Activation.SIGMOID:
         return torch.sigmoid
-    elif key is Activation.SINE:
+    elif act is Activation.SINE:
         return torch.sin
-    elif key == 'None':
+    elif act == 'None':
         # Return identity
         return lambda x: x
     else:
@@ -34,11 +34,11 @@ def get_activation(key: Activation, negative_slope: float = 0.1, **kwargs):
 # Basic feed-forward conditioanl GAN architecture
 class Generator(nn.Module):
     def __init__(self,
-                 c_dim=None,
-                 hidden_dim=200,
-                 activation=Activation.LEAKY_RELU,
-                 output_activation=None,
-                 eps=1e-20,
+                 c_dim: int = None,
+                 hidden_dim: int = 200,
+                 activation: Activation = Activation.LEAKY_RELU,
+                 output_activation: Activation = None,
+                 eps: float = 1e-20,
                  **kwargs):
         super(Generator, self).__init__()
 
@@ -74,9 +74,9 @@ class Generator(nn.Module):
 
 class Discriminator(nn.Module):
     def __init__(self,
-                 c_dim=None,
-                 hidden_dim=200,
-                 activation=Activation.LEAKY_RELU,
+                 c_dim: int = None,
+                 hidden_dim: int = 200,
+                 activation: Activation = Activation.LEAKY_RELU,
                  **kwargs):
         super(Discriminator, self).__init__()
 
@@ -105,12 +105,12 @@ class Discriminator(nn.Module):
         return x
 
 
-def load_Generator(path,
-                   c_dim=0,
-                   hidden_dim=200,
-                   activation=Activation.LEAKY_RELU,
-                   output_activation=None,
-                   device='cpu',
+def load_Generator(path: str,
+                   c_dim: int = 0,
+                   hidden_dim: int = 200,
+                   activation: Activation = Activation.LEAKY_RELU,
+                   output_activation: Activation = None,
+                   device: str = 'cpu',
                    **kwargs):
     netG = Generator(c_dim=c_dim, hidden_dim=hidden_dim, activation=activation, output_activation=output_activation,
                      **kwargs).to(device)
@@ -119,7 +119,12 @@ def load_Generator(path,
     return netG
 
 
-def load_Discriminator(path, c_dim=0, hidden_dim=200, activation=Activation.LEAKY_RELU, device='cpu', **kwargs):
+def load_Discriminator(path: str,
+                       c_dim: int = 0,
+                       hidden_dim: int = 200,
+                       activation: Activation = Activation.LEAKY_RELU,
+                       device: str = 'cpu',
+                       **kwargs):
     netD = Discriminator(c_dim=c_dim, hidden_dim=hidden_dim, activation=activation, **kwargs).to(device)
     checkpoint_D = torch.load(path)
     netD.load_state_dict(checkpoint_D)

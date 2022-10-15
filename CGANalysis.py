@@ -156,7 +156,7 @@ class CGANalysis():
                 in_sample = input_sample(self.N_test,C=c_tensor,device=self.device)
                 # Infer with generator
                 output = G(in_sample).detach()
-                gendata = postprocess(output,{**params,**c_dict}['S0'],proc_type=self.proc_type,delta_t=torch.tensor(params['t']),S_ref=torch.tensor(params['S_bar'],device=self.device,dtype=torch.float32),eps=self.eps).view(-1).cpu().numpy()
+                gendata = postprocess(output,{**params,**c_dict}['S0'],proc_type=self.proc_type, S_ref=torch.tensor(params['S_bar'],device=self.device,dtype=torch.float32),eps=self.eps).view(-1).cpu().numpy()
 
                 if raw_output and (self.proc_type is not None):
                     if x_plot is None:
