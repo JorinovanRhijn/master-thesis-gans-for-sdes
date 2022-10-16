@@ -3,6 +3,7 @@
 
 import torch
 import pickle
+import numpy as np
 from typing import Any
 from data_types import PreProcessing
 from nets import Generator, Discriminator
@@ -37,6 +38,16 @@ def count_layers(net: torch.nn.Module):
 
 def standardise(T: torch.Tensor,):
     return (T-T.mean())/T.std()
+
+
+def make_condition_cart_product(condition_ranges: dict, n: int):
+    """
+    Create a random sample from the Cartesian product of the vectors in condition_ranges
+    """
+    condition_entries = dict()
+    for k, v in condition_ranges.items():
+        condition_entries[k] = v.repeat(n // len(v))[np.random.permutation(n)]
+    return condition_entries
 
 
 def input_sample(N: int, C: dict = None, Z: torch.Tensor = None, device: str = 'cpu'):

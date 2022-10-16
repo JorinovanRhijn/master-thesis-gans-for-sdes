@@ -28,6 +28,24 @@ class Activation(Enum):
 
 
 @dataclass
+class DistributionType(Enum):
+    CDF = auto()
+    PDF = auto()
+    PPF = auto()
+
+
+@dataclass
+class SchemeType(Enum):
+    GBM_EULER = auto()
+    GBM_MILSTEIN = auto()
+    CIR_TRUNC_EULER = auto()
+    CIR_TRUNC_EULER_FULL = auto()
+    CIR_REFL_EULER = auto()
+    CIR_MILSTEIN_TRUNC = auto()
+    CIR_MILSTEIN_HEFTER = auto()
+
+
+@dataclass
 class NetParameters:
     eps: float  # small number added to logreturns and generator output to prevent exactly reaching 0
     hidden_dim: int
