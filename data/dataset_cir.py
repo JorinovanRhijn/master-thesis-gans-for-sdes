@@ -108,6 +108,23 @@ class CIRDataset(DatasetBase):
         else:
             raise ValueError
 
+    def condition_init(self, condition_dict):
+        '''
+        Initialise the dict with conditional parameters. Does nothing if C is not specified at all
+        '''
+        if condition_dict is not None:
+            assert self.test_params is not None, "Must specify a test condition."
+            assert str(condition_dict.keys()) == str(self.test_params.keys()),\
+                'The keys of the condition dict and test dict must match, also in order.'
+            for key in condition_dict.keys():
+                if hasattr(condition_dict[key], '__len__'):
+                    assert len(condition_dict[key]) in [self.n, 1],\
+                        'Size of the conditional arguments must be either 1 or N.'
+                    # Cast each entry into np array
+                    condition_dict[key] = np.array(condition_dict[key])
+            # Update the parameter set with the condition dict
+            self.params.update(condition_dict)
+
     def sample_exact(self,
                      n: int = None,
                      params: dict = None):
@@ -171,7 +188,7 @@ class CIRDataset(DatasetBase):
         Generate a train and test set, returns two tuples of the form (prior_samples, exact_variates)
         '''
         exact = self.sample_exact(n=self.n, params=self.params)
-        test_params = {**self.params, **self.condition_dict_test}
+        test_params = {**self.params, **self.test_params}
         exact_test = self.sample_exact(n=self.n_test, params=test_params)
 
         cdf = self._get_distribution(self.params, dist_type=DistributionType.CDF)

@@ -156,6 +156,6 @@ class GBMDataset(DatasetBase):
         Z_test = standardise(torch.randn((self.n_test, 1)))
 
         exact = self.sample_exact(Z=Z, params=self.params)
-        exact_test = self.sample_exact(Z=Z_test, params={**self.params, **self.condition_dict_test})
+        exact_test = self.sample_exact(Z=Z_test, params={**self.params, **self.test_params})
 
         return (Z, exact), (Z_test, exact_test)
