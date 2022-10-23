@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import scipy.stats as stat
 from utils import standardise, make_condition_cart_product
-from typing import Tuple, Dict, Union
+from typing import Tuple, Dict, Union, Iterable
 from data import DatasetBase
 from data_types import DistributionType, SchemeType
 
@@ -14,9 +14,9 @@ class CIRDataset(DatasetBase):
                  n: int = 10_000,
                  n_test: int = 10_000,
                  n_steps: int = 1000,
-                 params: Dict[str, Union(float, int)] = None,
-                 test_params: Dict[str, Union(float, int)] = None,
-                 condition_ranges: Dict[str, np.array[Union(float, int)]] = None,
+                 params: Dict[str, Union[float, int]] = None,
+                 test_params: Dict[str, Union[float, int]] = None,
+                 condition_ranges: Dict[str, Union[float, int, np.array]] = None,
                  ):
         self.n = n
         self.n_test = n_test

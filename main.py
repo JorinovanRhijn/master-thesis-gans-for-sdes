@@ -80,7 +80,11 @@ def train_GAN(netD: Discriminator, netG: Generator, dataset: Union(GBMDataset, C
     train_analysis.format = 'png'
 
     (Z_train, X_train), (_, _) = dataset.generate_train_test()
-    X_train = preprocess(X_train)
+    X_train = preprocess(X_train,
+                         X_prev=dataset.params['S0'],
+                         proc_type=config.meta_parameters.proc_type,
+                         S_ref=config.meta_parameters.S_ref,
+                         eps=config.meta_parameters.eps)
 
     if dataset.condition_dict is not None:
         C_tensors = dict_to_tensor(dataset.condition_dict)

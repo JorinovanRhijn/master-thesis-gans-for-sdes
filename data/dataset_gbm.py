@@ -14,9 +14,9 @@ class GBMDataset(DatasetBase):
                  n: int = 10_000,
                  n_test: int = 10_000,
                  n_steps: int = 1000,
-                 params: Dict[str, Union(float, int)] = None,
-                 test_params: Dict[str, Union(float, int)] = None,
-                 condition_ranges: Dict[str, np.array[Union(float, int)]] = None,
+                 params: Dict[str, Union[float, int]] = None,
+                 test_params: Dict[str, Union[float, int]] = None,
+                 condition_ranges: Dict[str, Union[float, int, np.array]] = None,
                  ):
         self.n = n
         self.n_test = n_test

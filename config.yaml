@@ -26,6 +26,8 @@ test_parameters:
 meta_parameters:
     preset_str: 'cir_feller_violated_high_gamma'
     proc_type_str: 'scale_S_ref'
+    S_ref: 0.1
+    eps: 0.00000000000000000000000000000000000000000000000000000000001
     supervised: False
     seed: 42
     save_figs: False
@@ -35,3 +37,8 @@ meta_parameters:
     output_name: 'output'
     enable_cuda: True
     conditional_gan: True
+
+plot_parameters:
+    noise_samples: 10_000
+    save_fig: False
+    save_dir: './output/plots/'

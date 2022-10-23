@@ -35,10 +35,13 @@ def preprocess(X_next: torch.Tensor,
     assert isinstance(proc_type, PreProcessing), f'proc_type must be one of \
     {PreProcessing._member_names_}'
     if proc_type is PreProcessing.LOGRETURNS:
+        assert X_prev is not None, "X_prev must be specified to calculate next return value."
         return torch.log(X_next / X_prev + eps)
     elif proc_type is PreProcessing.RETURNS:
+        assert X_prev is not None, "X_prev must be specified to calculate next return value."
         return X_next/X_prev - 1
     elif proc_type is PreProcessing.SCALE_S_REF:
+        assert S_ref is not None, "S_ref must be specified to calculate next return value."
         R = X_next/S_ref-1
         return R
 
@@ -57,13 +60,32 @@ def postprocess(R: torch.Tensor,
     assert isinstance(proc_type, PreProcessing), f'proc_type must be one of \
     {PreProcessing._member_names_}'
     if proc_type is PreProcessing.LOGRETURNS:
+        assert X_prev is not None, "X_prev must be specified to calculate next return value."
         return X_prev*torch.exp(R) + eps
     elif proc_type is PreProcessing.RETURNS:
+        assert X_prev is not None, "X_prev must be specified to calculate next return value."
         return X_prev*(1+R)
     elif proc_type is PreProcessing.SCALE_S_REF:
+        assert S_ref is not None, "S_ref must be specified to calculate next value."
         X_next = torch.abs((R+1)*S_ref)
         return X_next
 
 
-def sample(input_sample: torch.Tensor, net: Union(Discriminator, Generator)):
-    pass
+def inference_sample(input_sample: torch.Tensor,
+                     net: Union(Discriminator, Generator),
+                     X_prev: torch.Tensor = None,
+                     S_ref: float = None,
+                     proc_type: PreProcessing = None,
+                     eps: float = 1e-8,
+                     to_np: bool = False,
+                     raw_output: bool = False,
+                     device: torch.DeviceObjType = torch.device('cpu')):
+
+    output = net(input_sample).detach().to(device).view(-1)
+    if to_np:
+        output = output.numpy()
+
+    if raw_output:
+        return output
+    else:
+        return postprocess(output, X_prev, proc_type, S_ref, eps)

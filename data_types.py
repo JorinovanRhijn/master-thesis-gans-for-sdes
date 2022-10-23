@@ -97,6 +97,8 @@ class TestParameters:
 class MetaParameters:
     preset_str: str  # preset parameters for fast testing
     proc_type_str: str  # pre-processing type
+    S_ref: float  # variable to scale with if proc_type is set to scale_S_ref
+    eps: float  # small increment to add to postprocessing step
     supervised: bool  # by default, use a vanilla GAN
     seed: int  # random seed throughout the training process
     save_figs: bool
@@ -127,6 +129,13 @@ class MetaParameters:
                            returns=PreProcessing.RETURNS,
                            logreturns=PreProcessing.LOGRETURNS)
         return _proc_types.get(self.proc_type_str, None)
+
+
+@dataclass
+class PlotParameters:
+    noise_samples: int
+    save_fig: bool
+    save_dir: str
 
 
 @dataclass

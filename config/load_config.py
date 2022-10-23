@@ -2,8 +2,8 @@ import yaml
 from data_types import Config, MetaParameters, TestParameters, TrainParameters, NetParameters
 
 
-def load_config() -> Config:
-    with open("./config.yaml") as f:
+def load_config(fname: str = "./config.yaml") -> Config:
+    with open(fname) as f:
         config_dict = yaml.load(f, Loader=yaml.FullLoader)
         f.close()
 
