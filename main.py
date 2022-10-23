@@ -13,11 +13,13 @@ import statsmodels.distributions as smd
 import scipy.stats as stat
 
 from dataclasses import asdict
+from typing import Union
 from data_types import Config
 from CGANalysis import CGANalysis
-from sde_dataset import SDEDataset
+from data import GBMDataset, CIRDataset
+from sample import preprocess, postprocess
 from utils import input_sample, count_layers, append_gradients, dict_to_tensor,\
-    make_test_tensor, preprocess, postprocess, pickle_it, select_device
+    make_test_tensor, pickle_it, select_device
 from train_step import step_handler
 from nets import Generator, Discriminator
 from presets import load_preset
@@ -37,7 +39,7 @@ torch.manual_seed(config.meta_parameters.seed)
 np.random.seed(seed=config.meta_parameters.seed)
 
 
-def train_GAN(netD: Discriminator, netG: Generator, data: SDEDataset):
+def train_GAN(netD: Discriminator, netG: Generator, dataset: Union(GBMDataset, CIRDataset)):
     '''
     Training loop: train_GAN(netD, netG, data, meta)
     Inspired by several tricks from DCGAN PyTorch tutorial.
@@ -51,7 +53,8 @@ def train_GAN(netD: Discriminator, netG: Generator, data: SDEDataset):
     fake_label = 0
     GANloss = nn.BCELoss()
 
-    GAN_step = step_handler(supervised_bool=config.meta_parameters.supervised, CGAN_bool=data.CGAN)
+    GAN_step = step_handler(supervised_bool=config.meta_parameters.supervised,
+                            CGAN_bool=config.metaparameters.conditional_gan)
 
     # Initialise lists for logging
     D_losses = []
@@ -64,10 +67,9 @@ def train_GAN(netD: Discriminator, netG: Generator, data: SDEDataset):
 
     if not pt.exists(pt.join(config.meta_parameters.default_dir, 'training', '')):
         os.mkdir(pt.join(config.meta_parameters.default_dir, 'training', ''))
-    train_analysis = CGANalysis(data,
+    train_analysis = CGANalysis(dataset,
                                 netD,
                                 netG,
-                                SDE=data.SDE,
                                 save_all_figs=config.meta_parameters.save_figs,
                                 results_path=pt.join(config.meta_parameters.default_dir, 'training', ''),
                                 proc_type=config.meta_parameters.proc_type,
@@ -77,9 +79,12 @@ def train_GAN(netD: Discriminator, netG: Generator, data: SDEDataset):
 
     train_analysis.format = 'png'
 
-    if data.C is not None:
-        C_tensors = dict_to_tensor(data.C)
-        C_test = make_test_tensor(data.C_test, data.N_test)
+    (Z_train, X_train), (_, _) = dataset.generate_train_test()
+    X_train = preprocess(X_train)
+
+    if dataset.condition_dict is not None:
+        C_tensors = dict_to_tensor(dataset.condition_dict)
+        C_test = make_test_tensor(config.test_parameters.test_condition, dataset.n_test)
     else:
         C_test = None
 
@@ -96,7 +101,7 @@ def train_GAN(netD: Discriminator, netG: Generator, data: SDEDataset):
     plot_iter = 0
 
     # Get the amount of batches implied by training set size and batch_size
-    n_batches = data.N // config.train_parameters.batch_size
+    n_batches = dataset.n // config.train_parameters.batch_size
 
     optG = optim.Adam(netG.parameters(),
                       lr=config.train_parameters.lr_G,
@@ -118,14 +123,14 @@ def train_GAN(netD: Discriminator, netG: Generator, data: SDEDataset):
                 optG.param_groups[0]['lr'] = optG.param_groups[0]['lr'] / config.train_parameters.c_lr
 
             # Sample random minibatch from training set with replacement
-            indices = np.array((np.random.rand(config.train_parameters.batch_size)*data.N), dtype=int)
+            indices = np.array((np.random.rand(config.train_parameters.batch_size)*dataset.n), dtype=int)
             # Uncomment to sample minibatch from training set without replacement
             # indices = np.arange(i*b_size,(i+1)*b_size)
 
             # Get data batch based on indices
-            X_i = data.exact[indices, :].to(DEVICE)
-            C_i = C_tensors[indices, :].to(DEVICE) if data.CGAN else None
-            Z_i = data.Z[indices, :].to(DEVICE) if config.meta_parameters.supervised else None
+            X_i = X_train[indices, :].to(DEVICE)
+            C_i = C_tensors[indices, :].to(DEVICE) if config.meta_parameters.conditional_gan else None
+            Z_i = Z_train[indices, :].to(DEVICE) if config.meta_parameters.supervised else None
 
             # -------------------------------------------------------
             # GAN training step
@@ -151,40 +156,39 @@ def train_GAN(netD: Discriminator, netG: Generator, data: SDEDataset):
             # Output training stats
             if (iters % 100 == 0) and (i % config.train_parameters.batch_size) == 0:
                 print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
-                      % (epoch, config.train_parameters.epochs, i, data.N // config.train_parameters.batch_size,
+                      % (epoch, config.train_parameters.epochs, i, dataset.n // config.train_parameters.batch_size,
                          errD.item(), errG.item(), D_x, D_G_z1, D_G_z2))
-                input_G = input_sample(data.N_test, C=C_test, device=DEVICE)
+                input_G = input_sample(dataset.n_test, C=C_test, device=DEVICE)
                 fake = postprocess(netG(input_G).detach().view(-1),
-                                   {**data.params, **data.C_test}['S0'],
+                                   {**dataset.params, **dataset.test_params}['S0'],
                                    proc_type=config.meta_parameters.proc_type,
-                                   S_ref=torch.tensor(data.params['S_bar'],
+                                   S_ref=torch.tensor(dataset.params['S_bar'],
                                    device=DEVICE,
                                    dtype=torch.float32),
                                    eps=config.net_parameters.eps).cpu().view(-1).numpy()
                 ecdf_fake = smd.ECDF(fake)
-                ecdf_test = smd.ECDF(data.exact_test.view(-1))
-                # cdf_test = train_analysis.exact_cdf(params={**data.params,**C_test})
-                x = np.linspace(1e-5, 3, 1000)  # plotting vector
+                ecdf_test = smd.ECDF(dataset.exact_test.view(-1))
+                # x = np.linspace(1e-5, 3, 1000)  # plotting vector
                 x = train_analysis.x
 
-                # Infinity norm with ECDF on test data (Kolmogorov-Smirnov statistic)
+                # Infinity norm with ECDF on test dataset.(Kolmogorov-Smirnov statistic)
                 ksstat.append(np.max(np.abs(ecdf_fake(x)-ecdf_test(x))))
                 # ksstat.append(stat.kstest(fake,cdf=cdf_test),alternative='two-sided')[0])
 
                 # 1D Wasserstein distance as implemented in Scipy stats package
-                wasses.append(stat.wasserstein_distance(fake, data.exact_test.view(-1)))
+                wasses.append(stat.wasserstein_distance(fake, dataset.exact_test.view(-1)))
 
                 # Keep track of the L1 norm of the gradients in each layer
                 append_gradients(netD, netG, D_grads, G_grads)
 
                 itervec.append(iters)
 
-            # Update the generated data in analysis instance
+            # Update the generated dataset.in analysis instance
             if ((iters % config.meta_parameters.plot_interval == 0) and (config.meta_parameters.save_iter_plot)):
                 # Update network references for inference
                 train_analysis.G = netG
                 train_analysis.D = netD
-                train_analysis.save_iter_plot(iters, params=data.params, D=netD, G=netG)
+                train_analysis.save_iter_plot(iters, params=dataset.params, D=netD, G=netG)
                 plot_iter += 1
 
             # Save Losses for plotting later
@@ -197,10 +201,10 @@ def train_GAN(netD: Discriminator, netG: Generator, data: SDEDataset):
         times.append(tick1-tick0)
 
     # Get range of training parameters if CGAN
-    if data.C is not None:
+    if dataset.condition_ranges is not None:
         C_ranges = dict()
-        for key in list(data.C.keys()):
-            C_ranges[key] = (min(data.C[key]), max(data.C[key]))
+        for key in list(dataset.C.keys()):
+            C_ranges[key] = (min(dataset.condition_ranges[key]), max(dataset.condition_ranges[key]))
 
     # Create dict for output log
     output_dict = dict(
@@ -215,12 +219,12 @@ def train_GAN(netD: Discriminator, netG: Generator, data: SDEDataset):
         final_lr_G=[optG.param_groups[0]['lr']],
         final_lr_D=[optD.param_groups[0]['lr']],
         total_time=[np.sum(times)],
-        train_condition=list(data.C.keys()) if data.C is not None else None,
-        train_condition_ranges=[str(C_ranges)] if data.C is not None else None,
-        test_condition=[str(data.C_test)] if data.C is not None else None,
-        params_names=list(data.params),
-        params=list(data.params.values()),
-        SDE=[data.SDE],
+        train_condition=list(dataset.C.keys()) if dataset.condition_dict is not None else None,
+        train_condition_ranges=[str(C_ranges)] if dataset.condition_dict is not None else None,
+        test_condition=[str(dataset.C_test)] if dataset.condition_dict is not None else None,
+        params_names=list(dataset.params),
+        params=list(dataset.params.values()),
+        SDE=[dataset.SDE],
         )
 
     # Add metaparameters to output log
@@ -239,7 +243,7 @@ def train_GAN(netD: Discriminator, netG: Generator, data: SDEDataset):
     # Convert to Pandas DataFrame
     results_df = pd.DataFrame(dict([(k, pd.Series(v)) for k, v in output_dict.items()]))
 
-    pd.concat((results_df, pd.DataFrame({**data.params, **data.C_test}, index=[0])), axis=1, ignore_index=True)
+    pd.concat((results_df, pd.DataFrame(dataset.test_params, index=[0])), axis=1, ignore_index=True)
 
     results_df = pd.concat([results_df, pd.DataFrame(G_grads[k], columns=['GradsG_L%d' % k])], axis=1, sort=False)
     for k in range(len(D_grads)):
@@ -252,13 +256,11 @@ def train_GAN(netD: Discriminator, netG: Generator, data: SDEDataset):
 
 def main():
     # Supervised GAN?
-    options = [False, True]
-    # Alternative: run over different pre-processing types, comment the above line and uncomment the one below
-    # options = [None,'returns','logreturns','scale_S_ref']
+    cycle_supervised = [False, True]
 
     results_path = config.meta_parameters.default_dir
 
-    for i in range(len(options)):
+    for i in range(len(cycle_supervised)):
         # Reset the seed at each iteration for equal initalisation of the nets
         torch.manual_seed(config.meta_parameters.seed)
         np.random.seed(seed=config.meta_parameters.seed)
@@ -268,28 +270,17 @@ def main():
             os.mkdir(pt.join(results_path+'/iter_%d' % i))
 
         # Modify training conditions in loop
-
-        config.meta_parameters.supervised = options[i]
-        # Alternative: run over different pre-processing types, comment the above line and uncomment the one below
-        # META['proc_type'] = options[i]
+        config.meta_parameters.supervised = cycle_supervised[i]
 
         # Override the default n_D, the amount of training steps of D per G training step if vanilla GAN.
         config.train_parameters.n_D = 1 if config.meta_parameters.supervised else config.train_parameters.n_D
 
         # Make the dataset and initialise the GAN
-        X = load_preset(config.meta_parameters.preset,
-                        N_train=config.train_parameters.N_train,
-                        N_test=config.train_parameters.N_test)
-        X.exact = preprocess(X.exact,
-                             torch.tensor(X.params['S0'],
-                                          dtype=torch.float32).view(-1, 1),
-                             proc_type=config.meta_parameters.proc_type,
-                             S_ref=torch.tensor(X.params['S_bar'],
-                                                device=torch.device('cpu'),
-                                                dtype=torch.float32),
-                             eps=config.net_parameters.eps)
+        dataset = load_preset(config.meta_parameters.preset,
+                              n_train=config.train_parameters.n_train,
+                              n_test=config.test_parameters.n_test)
 
-        c_dim = 0 if X.C is None else len(X.C)
+        c_dim = 0 if dataset.condition_ranges is None else len(dataset.condition_ranges)
         netG = Generator(c_dim=c_dim).to(DEVICE)
         netG.eps = config.net_parameters.eps
         c_dim_discr = c_dim + 1 if config.meta_parameters.supervised else c_dim
@@ -300,7 +291,7 @@ def main():
                              activation=config.net_parameters.activation).to(DEVICE)
 
         # Traing the GAN
-        output_dict, results_df = train_GAN(netD, netG, X)
+        output_dict, results_df = train_GAN(netD, netG, dataset)
 
         # Store results
         netG_dir = pt.join(results_path, 'iter_%d' % i, 'netG.pth')
@@ -312,9 +303,9 @@ def main():
 
         if config.meta_parameters.report:
             results_df.to_csv(pt.join(results_path, 'iter_%d' % i, 'train_log.csv'), index=False, header=True)
-            # Uncomment to save the entire output dict
-            # log_path = pt.join(results_path,'iter_%d'%i,'train_log.pkl')
-            # pickle_it(output_dict,log_path)
+            if config.meta_parameters.save_log_dict:
+                log_path = pt.join(results_path, 'iter_%d' % i, 'train_log.pkl')
+                pickle_it(output_dict, log_path)
             meta_path = pt.join(results_path, 'iter_%d' % i, 'metadata.pkl')
             pickle_it(config, meta_path)
             print('Saved logs in ' + results_path + '/iter_%d/' % i)

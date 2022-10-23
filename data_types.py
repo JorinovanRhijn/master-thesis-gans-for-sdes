@@ -75,8 +75,7 @@ class NetParameters:
 
 @dataclass
 class TrainParameters:
-    N_train: int
-    N_test: int
+    n_train: int
     batch_size: int
     c_lr: float  # factor by which the learning rate is divided every cut_lr_evert iterations
     cut_lr_every: int  # number of iterations after which to reduce the learning rate
@@ -89,6 +88,12 @@ class TrainParameters:
 
 
 @dataclass
+class TestParameters:
+    n_test: int
+    test_condition: dict  # specify a dict with the test parameters
+
+
+@dataclass
 class MetaParameters:
     preset_str: str  # preset parameters for fast testing
     proc_type_str: str  # pre-processing type
@@ -96,11 +101,12 @@ class MetaParameters:
     seed: int  # random seed throughout the training process
     save_figs: bool
     save_iter_plot: bool
-    report: bool
+    save_log_dict: bool
     plot_interval: int
     seed: int
     output_name: str = "output"
     enable_cuda: bool = True
+    conditional_gan: bool = False
 
     @property
     def default_dir(self):
@@ -126,6 +132,7 @@ class MetaParameters:
 @dataclass
 class Config:
     train_parameters: TrainParameters
+    test_parameters: TestParameters
     net_parameters: NetParameters
     meta_parameters: MetaParameters
 

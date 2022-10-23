@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import scipy.stats as stat
 from utils import standardise, make_condition_cart_product
-from typing import Tuple, Dict, Any
+from typing import Tuple, Dict, Union, Any
 from data import DatasetBase
 from data_types import DistributionType, SchemeType
 
@@ -11,19 +11,22 @@ class GBMDataset(DatasetBase):
     DEFAULT_PARAMS = dict(dt=1, S0=1, S0_test=1, mu=0.05, sigma=0.2)
 
     def __init__(self,
-                 params: Dict[str, Any] = None,
-                 test_params: Dict[str, Any] = None,
-                 condition_ranges: Dict[str, Any] = None,
+                 n: int = 10_000,
+                 n_test: int = 10_000,
+                 n_steps: int = 1000,
+                 params: Dict[str, Union(float, int)] = None,
+                 test_params: Dict[str, Union(float, int)] = None,
+                 condition_ranges: Dict[str, np.array[Union(float, int)]] = None,
                  ):
-        self.n = 10_000
-        self.n_test = 10_000
-        self.n_steps = 1000
+        self.n = n
+        self.n_test = n_test
+        self.n_steps = n_steps
         self.SDE = 'GBM'
         self.params = params if params is not None else self.DEFAULT_PARAMS
         self.test_params = test_params if test_params is not None else self.DEFAULT_PARAMS
         self.condition_ranges = condition_ranges
         if condition_ranges is not None:
-            condition_dict = make_condition_cart_product(self.condition_ranges, self.n)
+            condition_dict = make_condition_cart_product(condition_ranges, self.n)
         else:
             condition_dict = None
         self.condition_init(condition_dict)
