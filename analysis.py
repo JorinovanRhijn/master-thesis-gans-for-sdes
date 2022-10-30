@@ -9,8 +9,7 @@ from typing import Union, List, Dict
 from data import DatasetBase
 from nets import Generator, Discriminator
 from utils import make_test_tensor, get_plot_bounds, cond_dict_to_cart_prod
-from sample import inference_sample, input_sample, postprocess, preprocess
-from matplotlib.legend_handler import HandlerTuple
+from sample import input_sample, postprocess, preprocess
 from KDEpy import FFTKDE
 
 
@@ -34,23 +33,29 @@ class Analysis:
                  generator: Generator,
                  config: Config,
                  device: torch.DeviceObjType = torch.device('cpu'),
+                 noise_samples: int = None,
                  ):
         self.dataset = dataset
         self.generator = generator
         self.config = config
-        self.noise_samples = config.plot_parameters.noise_samples
+        if noise_samples is None:
+            self.noise_samples = config.plot_parameters.noise_samples
+        else:
+            self.noise_samples = noise_samples
         self.proc_type = config.meta_parameters.proc_type
         self.device = device
 
-    def check_generator(self, condition_dict: dict):
+    def check_generator(self, generator: Generator, condition_dict: dict):
         if condition_dict is not None:
-            assert len(condition_dict) == self.generator.c_dim,\
+            assert len(condition_dict) == generator.c_dim,\
              "Condition dict dimension does not match generator input dimension."
 
-    def infer(self, condition_dict: dict, noise: torch.Tensor = None) -> torch.Tensor:
+    def infer(self, condition_dict: dict, generator: Generator = None, noise: torch.Tensor = None) -> torch.Tensor:
         if noise is not None:
             assert len(noise) == self.noise_samples,\
                                     "Noise input dimension must match plot noise dimension."
+        if generator is None:
+            generator = self.generator
         if condition_dict is None:
             condition_tensor = None
         else:
@@ -60,7 +65,7 @@ class Analysis:
                                  noise,
                                  self.device,
                                  )
-        output = self.generator(in_sample).detach().view(-1)
+        output = generator(in_sample).detach().view(-1)
         return output
 
     def _get_S0(self, condition_dict):
@@ -71,9 +76,9 @@ class Analysis:
                 S0 = self.dataset.test_params['S0']
         return S0
 
-    def _gen_and_proc_output(self, condition_dict: dict, raw_output: bool) -> torch.Tensor:
-        self.check_generator(condition_dict)
-        output = self.infer(condition_dict=condition_dict)
+    def _gen_and_proc_output(self, condition_dict: dict, generator: Generator, raw_output: bool) -> torch.Tensor:
+        self.check_generator(generator, condition_dict)
+        output = self.infer(condition_dict=condition_dict, generator=generator)
         if not raw_output:
             S0 = self._get_S0(condition_dict)
             output = postprocess(output,
@@ -98,6 +103,7 @@ class Analysis:
 
     def plot(self,
              condition_ranges: Dict[str, Union[List[float], float]] = None,
+             generator: Generator = None,
              raw_output: bool = False,
              plot_type: str = "ecdf",
              ax=None):
@@ -111,12 +117,15 @@ class Analysis:
             all_combs = cond_dict_to_cart_prod(condition_ranges)
             iters = len(all_combs)
 
+        if generator is None:
+            generator = self.generator
+
         x_mins, x_maxs = [], []
 
         for i in range(iters):
             line = self.LINES[i % len(self.LINES)]
             condition_dict = all_combs[i] if condition_ranges is not None else None
-            output_np = self._gen_and_proc_output(condition_dict, raw_output).view(-1).numpy()
+            output_np = self._gen_and_proc_output(condition_dict, generator, raw_output).view(-1).numpy()
 
             f_est = estimator(output_np)
             params = {**self.dataset.params, **self.dataset.test_params, **condition_dict}\

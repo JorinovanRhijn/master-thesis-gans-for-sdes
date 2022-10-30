@@ -11,7 +11,7 @@ def input_sample(N: int, C: dict = None, Z: torch.Tensor = None, device: str = '
     C must be a tensor of size [N,C_dim] containing the condition values with e.g. N the batch size
     '''
     if Z is None:
-        Z = torch.randn((N, 1)).to(device)
+        Z = torch.randn((N, 1), dtype=torch.float32).to(device)
     else:
         Z = Z.to(device)
     Z = standardise(Z)

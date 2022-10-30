@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import scipy.stats as stat
 from utils import standardise, make_condition_cart_product
-from typing import Tuple, Dict, Union, Any
+from typing import Tuple, Dict, Union
 from data import DatasetBase
 from data_types import DistributionType, SchemeType
 
@@ -13,14 +13,12 @@ class GBMDataset(DatasetBase):
     def __init__(self,
                  n: int = 10_000,
                  n_test: int = 10_000,
-                 n_steps: int = 1000,
                  params: Dict[str, Union[float, int]] = None,
                  test_params: Dict[str, Union[float, int]] = None,
                  condition_ranges: Dict[str, Union[float, int, np.array]] = None,
                  ):
         self.n = n
         self.n_test = n_test
-        self.n_steps = n_steps
         self.SDE = 'GBM'
         self.params = params if params is not None else self.DEFAULT_PARAMS
         self.test_params = test_params if test_params is not None else dict(S0=self.DEFAULT_PARAMS['S0'])
@@ -93,6 +91,7 @@ class GBMDataset(DatasetBase):
                     condition_dict[key] = np.array(condition_dict[key])
             # Update the parameter set with the condition dict
             self.params.update(condition_dict)
+            self.condition_dict = condition_dict
 
     def sample_exact(self,
                      n: int = None,
@@ -108,7 +107,7 @@ class GBMDataset(DatasetBase):
         if n is None:
             n = self.n
         if Z is None:
-            Z = standardise(torch.randn((n, 1)))
+            Z = standardise(torch.randn((n, 1), dtype=torch.float32))
 
         mu = params['mu']
         sigma = params['sigma']
@@ -155,8 +154,8 @@ class GBMDataset(DatasetBase):
         '''
         Generate a train and test set, returns two tuples of the form (prior_samples, exact_variates)
         '''
-        Z = standardise(torch.randn((self.n, 1)))
-        Z_test = standardise(torch.randn((self.n_test, 1)))
+        Z = standardise(torch.randn((self.n, 1), dtype=torch.float32))
+        Z_test = standardise(torch.randn((self.n_test, 1), dtype=torch.float32))
 
         exact = self.sample_exact(Z=Z, params=self.params)
         exact_test = self.sample_exact(Z=Z_test, params={**self.params, **self.test_params})

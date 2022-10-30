@@ -13,13 +13,12 @@ import statsmodels.distributions as smd
 import scipy.stats as stat
 
 from dataclasses import asdict
-from typing import Union
 from data_types import Config
-from CGANalysis import CGANalysis
-from data import GBMDataset, CIRDataset
+from data import DatasetBase
 from sample import preprocess, postprocess
-from utils import input_sample, count_layers, append_gradients, dict_to_tensor,\
-    make_test_tensor, pickle_it, select_device
+from utils import count_layers, append_gradients, dict_to_tensor,\
+    make_test_tensor, pickle_it, select_device, get_plot_bounds
+from sample import input_sample
 from train_step import step_handler
 from nets import Generator, Discriminator
 from presets import load_preset
@@ -39,7 +38,7 @@ torch.manual_seed(config.meta_parameters.seed)
 np.random.seed(seed=config.meta_parameters.seed)
 
 
-def train_GAN(netD: Discriminator, netG: Generator, dataset: Union(GBMDataset, CIRDataset)):
+def train_GAN(netD: Discriminator, netG: Generator, dataset: DatasetBase):
     '''
     Training loop: train_GAN(netD, netG, data, meta)
     Inspired by several tricks from DCGAN PyTorch tutorial.
@@ -54,7 +53,7 @@ def train_GAN(netD: Discriminator, netG: Generator, dataset: Union(GBMDataset, C
     GANloss = nn.BCELoss()
 
     GAN_step = step_handler(supervised_bool=config.meta_parameters.supervised,
-                            CGAN_bool=config.metaparameters.conditional_gan)
+                            CGAN_bool=config.meta_parameters.conditional_gan)
 
     # Initialise lists for logging
     D_losses = []
@@ -67,26 +66,26 @@ def train_GAN(netD: Discriminator, netG: Generator, dataset: Union(GBMDataset, C
 
     if not pt.exists(pt.join(config.meta_parameters.default_dir, 'training', '')):
         os.mkdir(pt.join(config.meta_parameters.default_dir, 'training', ''))
-    train_analysis = CGANalysis(dataset,
-                                netD,
-                                netG,
-                                save_all_figs=config.meta_parameters.save_figs,
-                                results_path=pt.join(config.meta_parameters.default_dir, 'training', ''),
-                                proc_type=config.meta_parameters.proc_type,
-                                eps=config.net_parameters.eps,
-                                supervised=config.meta_parameters.supervised,
-                                device=DEVICE)
+    # train_analysis = CGANalysis(dataset,
+    #                             netD,
+    #                             netG,
+    #                             save_all_figs=config.meta_parameters.save_figs,
+    #                             results_path=pt.join(config.meta_parameters.default_dir, 'training', ''),
+    #                             proc_type=config.meta_parameters.proc_type,
+    #                             eps=config.net_parameters.eps,
+    #                             supervised=config.meta_parameters.supervised,
+    #                             device=DEVICE)
 
-    train_analysis.format = 'png'
+    # train_analysis.format = 'png'
 
-    (Z_train, X_train), (_, _) = dataset.generate_train_test()
+    (Z_train, X_train), (_, X_test) = dataset.generate_train_test()
     X_train = preprocess(X_train,
                          X_prev=dataset.params['S0'],
                          proc_type=config.meta_parameters.proc_type,
                          S_ref=config.meta_parameters.S_ref,
                          eps=config.meta_parameters.eps)
 
-    if dataset.condition_dict is not None:
+    if dataset.condition_ranges is not None:
         C_tensors = dict_to_tensor(dataset.condition_dict)
         C_test = make_test_tensor(config.test_parameters.test_condition, dataset.n_test)
     else:
@@ -171,16 +170,17 @@ def train_GAN(netD: Discriminator, netG: Generator, dataset: Union(GBMDataset, C
                                    dtype=torch.float32),
                                    eps=config.net_parameters.eps).cpu().view(-1).numpy()
                 ecdf_fake = smd.ECDF(fake)
-                ecdf_test = smd.ECDF(dataset.exact_test.view(-1))
+                ecdf_test = smd.ECDF(X_test.view(-1))
                 # x = np.linspace(1e-5, 3, 1000)  # plotting vector
-                x = train_analysis.x
+                x_min, x_max = get_plot_bounds(fake)
+                x = np.linspace(x_min, x_max, 1000)
 
                 # Infinity norm with ECDF on test dataset.(Kolmogorov-Smirnov statistic)
                 ksstat.append(np.max(np.abs(ecdf_fake(x)-ecdf_test(x))))
                 # ksstat.append(stat.kstest(fake,cdf=cdf_test),alternative='two-sided')[0])
 
                 # 1D Wasserstein distance as implemented in Scipy stats package
-                wasses.append(stat.wasserstein_distance(fake, dataset.exact_test.view(-1)))
+                wasses.append(stat.wasserstein_distance(fake, X_test.view(-1)))
 
                 # Keep track of the L1 norm of the gradients in each layer
                 append_gradients(netD, netG, D_grads, G_grads)
@@ -190,9 +190,7 @@ def train_GAN(netD: Discriminator, netG: Generator, dataset: Union(GBMDataset, C
             # Update the generated dataset.in analysis instance
             if ((iters % config.meta_parameters.plot_interval == 0) and (config.meta_parameters.save_iter_plot)):
                 # Update network references for inference
-                train_analysis.G = netG
-                train_analysis.D = netD
-                train_analysis.save_iter_plot(iters, params=dataset.params, D=netD, G=netG)
+                # train_analysis.save_iter_plot(iters, params=dataset.params, D=netD, G=netG)
                 plot_iter += 1
 
             # Save Losses for plotting later
@@ -207,7 +205,7 @@ def train_GAN(netD: Discriminator, netG: Generator, dataset: Union(GBMDataset, C
     # Get range of training parameters if CGAN
     if dataset.condition_ranges is not None:
         C_ranges = dict()
-        for key in list(dataset.C.keys()):
+        for key in list(dataset.condition_ranges.keys()):
             C_ranges[key] = (min(dataset.condition_ranges[key]), max(dataset.condition_ranges[key]))
 
     # Create dict for output log
@@ -223,10 +221,10 @@ def train_GAN(netD: Discriminator, netG: Generator, dataset: Union(GBMDataset, C
         final_lr_G=[optG.param_groups[0]['lr']],
         final_lr_D=[optD.param_groups[0]['lr']],
         total_time=[np.sum(times)],
-        train_condition=list(dataset.C.keys()) if dataset.condition_dict is not None else None,
+        train_condition=list(dataset.condition_dict.keys()) if dataset.condition_dict is not None else None,
         train_condition_ranges=[str(C_ranges)] if dataset.condition_dict is not None else None,
-        test_condition=[str(dataset.C_test)] if dataset.condition_dict is not None else None,
-        params_names=list(dataset.params),
+        test_condition=[str(dataset.test_params)] if dataset.condition_dict is not None else None,
+        params_names=list(dataset.params.keys()),
         params=list(dataset.params.values()),
         SDE=[dataset.SDE],
         )
@@ -305,7 +303,7 @@ def main():
         torch.save(netD.state_dict(), netD_dir)
         print('Saved Discriminator in %s' % netD_dir)
 
-        if config.meta_parameters.report:
+        if config.meta_parameters.save_log_dict:
             results_df.to_csv(pt.join(results_path, 'iter_%d' % i, 'train_log.csv'), index=False, header=True)
             if config.meta_parameters.save_log_dict:
                 log_path = pt.join(results_path, 'iter_%d' % i, 'train_log.pkl')

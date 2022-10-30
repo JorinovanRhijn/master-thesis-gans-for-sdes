@@ -8,19 +8,17 @@ from data_types import DistributionType, SchemeType
 
 
 class CIRDataset(DatasetBase):
-    DEFAULT_PARAMS = dict(dt=1, S0=1, S0_test=1, kappa=0.1, S_bar=1, gamma=0.1)
+    DEFAULT_PARAMS = dict(dt=1, S0=0.1, S0_test=0.1, kappa=0.1, S_bar=0.1, gamma=0.1)
 
     def __init__(self,
                  n: int = 10_000,
                  n_test: int = 10_000,
-                 n_steps: int = 1000,
                  params: Dict[str, Union[float, int]] = None,
                  test_params: Dict[str, Union[float, int]] = None,
                  condition_ranges: Dict[str, Union[float, int, np.array]] = None,
                  ):
         self.n = n
         self.n_test = n_test
-        self.n_steps = n_steps
         self.SDE = 'CIR'
         self.params = params if params is not None else self.DEFAULT_PARAMS
         self.test_params = test_params if test_params is not None else dict(S0=self.DEFAULT_PARAMS['S0'])
@@ -130,6 +128,7 @@ class CIRDataset(DatasetBase):
                     condition_dict[key] = np.array(condition_dict[key])
             # Update the parameter set with the condition dict
             self.params.update(condition_dict)
+            self.condition_dict = condition_dict
 
     def sample_exact(self,
                      n: int = None,
@@ -172,7 +171,7 @@ class CIRDataset(DatasetBase):
         if n_paths is None:
             n_paths = self.n
         if Z is None:
-            Z = standardise(torch.randn(n_paths, n_steps))
+            Z = standardise(torch.randn(n_paths, n_steps, dtype=torch.float32))
         else:
             assert Z.size(1) == n_steps, 'Increments must be of size n_steps'
 
@@ -200,7 +199,7 @@ class CIRDataset(DatasetBase):
         cdf = self._get_distribution(self.params, dist_type=DistributionType.CDF)
         cdf_test = self._get_distribution(test_params, dist_type=DistributionType.CDF)
 
-        Z = stat.norm.ppf(cdf(exact.view(-1).numpy()))
-        Z_test = stat.norm.ppf(cdf_test(exact_test.view(-1).numpy()))
+        Z = torch.tensor(stat.norm.ppf(cdf(exact.view(-1).numpy())), dtype=torch.float32).view(-1, 1)
+        Z_test = torch.tensor(stat.norm.ppf(cdf_test(exact_test.view(-1).numpy())), dtype=torch.float32).view(-1, 1)
 
         return (Z, exact), (Z_test, exact_test)
