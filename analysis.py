@@ -46,9 +46,6 @@ class Analysis:
         if condition_dict is not None:
             assert len(condition_dict) == self.generator.c_dim,\
              "Condition dict dimension does not match generator input dimension."
-        if self.config.meta_parameters.supervised:
-            assert self.generator.c_dim == 1 + len(condition_dict) if (condition_dict is not None) else 1,\
-                "Condition dict dimension does not match generator input dimension."
 
     def infer(self, condition_dict: dict, noise: torch.Tensor = None) -> torch.Tensor:
         if noise is not None:
@@ -149,8 +146,12 @@ class Analysis:
                 _, ax = plt.subplots(1, 1, dpi=100)
             ax.plot(x, f_exact(x), 'k', linestyle=line)
             lbl = ""
+            lbl_ctr = 0
             for k, v in condition_dict.items():
                 lbl += f"{k} = {v}"
+                lbl_ctr += 1
+                if (len(condition_dict.items()) > 1) and (lbl_ctr != len(condition_dict.items())):
+                    lbl += ', '
             ax.plot(x, f_est(x), '-', label=lbl)
 
         x_min, x_max = min(x_mins), max(x_maxs)
