@@ -136,6 +136,7 @@ class PlotParameters:
     noise_samples: int
     save_fig: bool
     save_dir: str
+    n_points: int
 
 
 @dataclass
@@ -144,6 +145,7 @@ class Config:
     test_parameters: TestParameters
     net_parameters: NetParameters
     meta_parameters: MetaParameters
+    plot_parameters: PlotParameters
 
 
 @dataclass

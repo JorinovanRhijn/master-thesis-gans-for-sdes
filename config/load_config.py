@@ -1,5 +1,5 @@
 import yaml
-from data_types import Config, MetaParameters, TestParameters, TrainParameters, NetParameters
+from data_types import Config, MetaParameters, PlotParameters, TestParameters, TrainParameters, NetParameters
 
 
 def load_config(fname: str = "./config.yaml") -> Config:
@@ -10,5 +10,6 @@ def load_config(fname: str = "./config.yaml") -> Config:
     config = Config(net_parameters=NetParameters(**config_dict['net_parameters']),
                     train_parameters=TrainParameters(**config_dict['train_parameters']),
                     test_parameters=TestParameters(**config_dict['test_parameters']),
-                    meta_parameters=MetaParameters(**config_dict['meta_parameters']))
+                    meta_parameters=MetaParameters(**config_dict['meta_parameters']),
+                    plot_parameters=PlotParameters(**config_dict['plot_parameters']))
     return config

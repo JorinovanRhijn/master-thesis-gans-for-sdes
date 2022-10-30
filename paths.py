@@ -3,7 +3,8 @@ import numpy as np
 from data_types import PreProcessing
 from sde_dataset import SDEDataset
 from nets import Generator
-from utils import make_test_tensor, postprocess
+from utils import make_test_tensor
+from sample import postprocess
 
 
 def make_GAN_paths(data: SDEDataset,

@@ -28,7 +28,7 @@ meta_parameters:
     proc_type_str: 'scale_S_ref'
     S_ref: 0.1
     eps: 0.00000000000000000000000000000000000000000000000000000000001
-    supervised: False
+    supervised: True
     seed: 42
     save_figs: False
     save_iter_plot: False
@@ -42,3 +42,4 @@ plot_parameters:
     noise_samples: 10_000
     save_fig: False
     save_dir: './output/plots/'
+    n_points: 1_000

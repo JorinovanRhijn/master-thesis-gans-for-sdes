@@ -23,7 +23,7 @@ class GBMDataset(DatasetBase):
         self.n_steps = n_steps
         self.SDE = 'GBM'
         self.params = params if params is not None else self.DEFAULT_PARAMS
-        self.test_params = test_params if test_params is not None else self.DEFAULT_PARAMS
+        self.test_params = test_params if test_params is not None else dict(S0=self.DEFAULT_PARAMS['S0'])
         self.condition_ranges = condition_ranges
         if condition_ranges is not None:
             condition_dict = make_condition_cart_product(condition_ranges, self.n)

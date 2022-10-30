@@ -72,7 +72,7 @@ def postprocess(R: torch.Tensor,
 
 
 def inference_sample(input_sample: torch.Tensor,
-                     net: Union(Discriminator, Generator),
+                     net: Union[Discriminator, Generator],
                      X_prev: torch.Tensor = None,
                      S_ref: float = None,
                      proc_type: PreProcessing = None,

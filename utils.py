@@ -4,7 +4,7 @@
 import torch
 import pickle
 import numpy as np
-from typing import Any
+from typing import Any, Tuple, List, Dict
 from nets import Generator, Discriminator
 
 
@@ -96,3 +96,41 @@ def append_gradients(D: Discriminator, G: Generator, D_grads: list, G_grads: lis
         if (p.requires_grad) and ("bias" not in n):
             G_grads[k].append(p.grad.abs().mean().item())
             k += 1
+
+
+def get_plot_bounds(vec, margin=0.1) -> Tuple:
+    x_min = min(vec)
+    x_max = max(vec)
+    x_min -= margin * abs(x_min)
+    x_max += margin * abs(x_max)
+    return (x_min, x_max)
+
+
+def cond_dict_to_cart_prod(d: dict) -> List[Dict[str, float]]:
+
+    def to_dict_singletons(lst: List[Dict[str, float]], key: str):
+        return [{key: el} for el in lst]
+
+    def all_comb_two_dicts(l1: List[Dict[str, float]], l2: List[Dict[str, float]]):
+        prod_list = []
+        for d1 in l1:
+            for d2 in l2:
+                prod_list.append({**d1, **d2})
+        return prod_list
+
+    prod_list = []
+    keys = list(d.keys())
+    vecs = list(d.values())
+
+    # Handle the trivial case of single vector
+    if len(vecs) == 1:
+        return d
+
+    ctr_range = list(range(len(vecs)))
+    ctr_range.pop(0)
+
+    prod_list = to_dict_singletons(vecs[0], keys[0])
+    for i in ctr_range:
+        prod_list = all_comb_two_dicts(prod_list, to_dict_singletons(vecs[i], keys[i]))
+
+    return prod_list
