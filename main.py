@@ -1,6 +1,7 @@
 # Jorino van Rhijn
 # Monte Carlo Simulation of SDEs with GANs
 
+from itertools import cycle
 import torch
 import time
 import os
@@ -259,6 +260,7 @@ def train_GAN(netD: Discriminator, netG: Generator, dataset: DatasetBase):
 def main():
     # Supervised GAN?
     cycle_supervised = [False, True]
+    cycle_names = ['vanilla', 'supervised']
 
     results_path = config.meta_parameters.default_dir
 
@@ -268,8 +270,8 @@ def main():
         np.random.seed(seed=config.meta_parameters.seed)
 
         # Make folder for each run of the training loop
-        if not pt.exists(pt.join(results_path, 'iter_%d' % i)):
-            os.mkdir(pt.join(results_path+'/iter_%d' % i))
+        if not pt.exists(pt.join(results_path, cycle_names[i])):
+            os.mkdir(pt.join(results_path, cycle_names[i]))
 
         # Modify training conditions in loop
         config.meta_parameters.supervised = cycle_supervised[i]
@@ -296,21 +298,21 @@ def main():
         output_dict, results_df = train_GAN(netD, netG, dataset)
 
         # Store results
-        netG_dir = pt.join(results_path, 'iter_%d' % i, 'netG.pth')
-        netD_dir = pt.join(results_path, 'iter_%d' % i, 'netD.pth')
+        netG_dir = pt.join(results_path, cycle_names[i], 'netG.pth')
+        netD_dir = pt.join(results_path, cycle_names[i], 'netD.pth')
         torch.save(netG.state_dict(), netG_dir)
         print('Saved Generator in %s' % netG_dir)
         torch.save(netD.state_dict(), netD_dir)
         print('Saved Discriminator in %s' % netD_dir)
 
         if config.meta_parameters.save_log_dict:
-            results_df.to_csv(pt.join(results_path, 'iter_%d' % i, 'train_log.csv'), index=False, header=True)
+            results_df.to_csv(pt.join(results_path, cycle_names[i], 'train_log.csv'), index=False, header=True)
             if config.meta_parameters.save_log_dict:
-                log_path = pt.join(results_path, 'iter_%d' % i, 'train_log.pkl')
+                log_path = pt.join(results_path, cycle_names[i], 'train_log.pkl')
                 pickle_it(output_dict, log_path)
-            meta_path = pt.join(results_path, 'iter_%d' % i, 'metadata.pkl')
+            meta_path = pt.join(results_path, cycle_names[i], 'metadata.pkl')
             pickle_it(config, meta_path)
-            print('Saved logs in ' + results_path + '/iter_%d/' % i)
+            print('Saved logs in ' + results_path + cycle_names[i])
 
     print('----- Experiment finished -----')
 

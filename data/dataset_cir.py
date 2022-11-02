@@ -9,7 +9,7 @@ from data_types import DistributionType, SchemeType
 
 class CIRDataset(DatasetBase):
     DEFAULT_PARAMS = dict(dt=1, S0=0.1, S0_test=0.1, kappa=0.1, S_bar=0.1, gamma=0.1)
-
+    EPS = 1e-20  # a small constant to avoid reaching 0 when sampling exact samples
     def __init__(self,
                  n: int = 10_000,
                  n_test: int = 10_000,
@@ -192,14 +192,23 @@ class CIRDataset(DatasetBase):
         '''
         Generate a train and test set, returns two tuples of the form (prior_samples, exact_variates)
         '''
-        exact = self.sample_exact(n=self.n, params=self.params)
         test_params = {**self.params, **self.test_params}
-        exact_test = self.sample_exact(n=self.n_test, params=test_params)
-
-        cdf = self._get_distribution(self.params, dist_type=DistributionType.CDF)
-        cdf_test = self._get_distribution(test_params, dist_type=DistributionType.CDF)
-
-        Z = torch.tensor(stat.norm.ppf(cdf(exact.view(-1).numpy())), dtype=torch.float32).view(-1, 1)
-        Z_test = torch.tensor(stat.norm.ppf(cdf_test(exact_test.view(-1).numpy())), dtype=torch.float32).view(-1, 1)
+        Z, exact = self.generate(params=self.params)
+        Z_test, exact_test = self.generate(test_params)
 
         return (Z, exact), (Z_test, exact_test)
+
+    def generate(self, params: dict = None) -> Tuple[torch.Tensor, torch.Tensor]:
+        '''
+        Generate a train and test set, returns a tuple of the form (noise_variates, exact_samples)
+        '''
+        if params is None:
+            params = self.params
+
+        exact = self.sample_exact(n=self.n, params=params) + self.EPS
+
+        cdf = self._get_distribution(params, dist_type=DistributionType.CDF)
+
+        Z = torch.tensor(stat.norm.ppf(cdf(exact.view(-1).numpy())), dtype=torch.float32).view(-1, 1)
+
+        return (Z, exact)

@@ -24,7 +24,7 @@ test_parameters:
         dt: 1
 
 meta_parameters:
-    preset_str: 'cir_feller_satisfied'
+    preset_str: 'cir_feller_violated_high_gamma'
     proc_type_str: 'scale_S_ref'
     S_ref: 0.1
     eps: 0.00000000000000000000000000000000000000000000000000000000001
@@ -34,7 +34,7 @@ meta_parameters:
     save_iter_plot: False
     save_log_dict: False
     plot_interval: 500
-    output_name: 'output/feller_satisfied'
+    output_name: 'output/feller_violated_high_gamma'
     enable_cuda: True
     conditional_gan: True
 

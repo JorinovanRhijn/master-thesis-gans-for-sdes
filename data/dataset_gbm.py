@@ -154,10 +154,20 @@ class GBMDataset(DatasetBase):
         '''
         Generate a train and test set, returns two tuples of the form (prior_samples, exact_variates)
         '''
-        Z = standardise(torch.randn((self.n, 1), dtype=torch.float32))
-        Z_test = standardise(torch.randn((self.n_test, 1), dtype=torch.float32))
-
-        exact = self.sample_exact(Z=Z, params=self.params)
-        exact_test = self.sample_exact(Z=Z_test, params={**self.params, **self.test_params})
+        test_params = {**self.params, **self.test_params}
+        Z, exact = self.generate(params=self.params)
+        Z_test, exact_test = self.generate(test_params)
 
         return (Z, exact), (Z_test, exact_test)
+
+    def generate(self, params: dict = None) -> Tuple[torch.Tensor, torch.Tensor]:
+        '''
+        Generate a train and test set, returns a tuple of the form (noise_variates, exact_samples)
+        '''
+        if params is None:
+            params = self.params
+
+        Z = standardise(torch.randn((self.n, 1), dtype=torch.float32))
+        exact = self.sample_exact(Z=Z, params=params)
+
+        return (Z, exact)
