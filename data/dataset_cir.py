@@ -10,6 +10,7 @@ from data_types import DistributionType, SchemeType
 class CIRDataset(DatasetBase):
     DEFAULT_PARAMS = dict(dt=1, S0=0.1, S0_test=0.1, kappa=0.1, S_bar=0.1, gamma=0.1)
     EPS = 1e-20  # a small constant to avoid reaching 0 when sampling exact samples
+
     def __init__(self,
                  n: int = 10_000,
                  n_test: int = 10_000,
@@ -69,8 +70,7 @@ class CIRDataset(DatasetBase):
             params = self.params
         return self._get_distribution(params, dist_type=DistributionType.PPF)
 
-    @staticmethod
-    def _path_step(path_prev, kappa, gamma, S_bar, dt, Z, scheme: SchemeType):
+    def _path_step(self, path_prev, kappa, gamma, S_bar, dt, Z, scheme: SchemeType):
         if scheme is SchemeType.CIR_TRUNC_EULER:
             """
             Partially truncated Euler
@@ -109,6 +109,15 @@ class CIRDataset(DatasetBase):
             return np.maximum(np.maximum(
                                         m_const, np.sqrt(np.maximum(m_const, path_prev)) +
                                         m_const*Z)**2+(kappa*S_bar - 1./4*gamma**2 - kappa*path_prev)*dt, 0)
+        elif scheme is SchemeType.CIR_EXACT:
+            n_paths = len(path_prev)
+            return self.sample_exact(n_paths,
+                                     params={'kappa': kappa,
+                                             'gamma': gamma,
+                                             'S_bar': S_bar,
+                                             'dt': dt,
+                                             'S0': path_prev,
+                                             }).view(-1)
         else:
             raise ValueError
 
@@ -186,6 +195,10 @@ class CIRDataset(DatasetBase):
 
         for n in range(n_steps):
             paths[:, n+1] = self._path_step(paths[:, n], kappa, gamma, S_bar, dt, Z[:, n], scheme=scheme)
+            if scheme is SchemeType.CIR_EXACT:
+                # Draw samples Z
+                cdf = self.cdf(params={**params, **dict(S0=paths[:, n])})
+                Z[:, n] = torch.tensor(stat.norm.ppf(cdf(paths[:, n+1])), dtype=torch.float32)
         return Z, paths
 
     def generate_train_test(self) -> Tuple[Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, torch.Tensor]]:

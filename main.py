@@ -88,7 +88,7 @@ def train_GAN(netD: Discriminator, netG: Generator, dataset: DatasetBase):
 
     if dataset.condition_ranges is not None:
         C_tensors = dict_to_tensor(dataset.condition_dict)
-        C_test = make_test_tensor(config.test_parameters.test_condition, dataset.n_test)
+        C_test = make_test_tensor(dataset.test_params, dataset.n_test)
     else:
         C_test = None
 
@@ -163,10 +163,11 @@ def train_GAN(netD: Discriminator, netG: Generator, dataset: DatasetBase):
                       % (epoch, config.train_parameters.epochs, i, dataset.n // config.train_parameters.batch_size,
                          errD.item(), errG.item(), D_x, D_G_z1, D_G_z2))
                 input_G = input_sample(dataset.n_test, C=C_test, device=DEVICE)
+                S_ref_key = 'S_bar' if dataset.SDE == 'CIR' else 'S0'
                 fake = postprocess(netG(input_G).detach().view(-1),
                                    {**dataset.params, **dataset.test_params}['S0'],
                                    proc_type=config.meta_parameters.proc_type,
-                                   S_ref=torch.tensor(dataset.params['S_bar'],
+                                   S_ref=torch.tensor(dataset.params[S_ref_key],
                                    device=DEVICE,
                                    dtype=torch.float32),
                                    eps=config.net_parameters.eps).cpu().view(-1).numpy()

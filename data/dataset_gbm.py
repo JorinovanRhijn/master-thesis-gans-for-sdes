@@ -65,8 +65,7 @@ class GBMDataset(DatasetBase):
             params = self.params
         return self._get_distribution(params, dist_type=DistributionType.PPF)
 
-    @staticmethod
-    def _path_step(path_prev, mu, sigma, dt, Z, scheme: SchemeType):
+    def _path_step(self, path_prev, mu, sigma, dt, Z, scheme: SchemeType):
         if scheme is SchemeType.GBM_EULER:
             return path_prev + mu*path_prev*dt + sigma*path_prev*np.sqrt(dt)*Z
         elif scheme is SchemeType.GBM_MILSTEIN:
@@ -74,6 +73,28 @@ class GBMDataset(DatasetBase):
              1./2*sigma**2*path_prev*dt*(np.power(Z, 2)-1)
         else:
             return ValueError
+
+    def exact_paths(self, params: dict = None, Z: torch.Tensor = None, n_steps: int = None, n_paths: int = None):
+        if params is None:
+            params = self.params
+
+        if n_paths is None:
+            n_paths = self.n
+        if n_steps is None:
+            n_steps = self.n_steps
+
+        if Z is None:
+            Z = torch.randn((n_paths, n_steps))
+
+        mu = params['mu']
+        sigma = params['sigma']
+        dt = params['dt']
+        S0 = params['S0']
+
+        exact = torch.zeros((n_paths, n_steps))
+        exact[:, 0] = S0
+        exact[:, 1:] = (S0*np.exp((mu-0.5*sigma**2)*dt+sigma*np.sqrt(dt)*Z).cumprod(axis=1))
+        return Z, exact
 
     def condition_init(self, condition_dict):
         '''
@@ -114,9 +135,8 @@ class GBMDataset(DatasetBase):
         S0 = params['S0']
         dt = params['dt']
 
-        exact = torch.tensor(S0*np.exp((mu-0.5*sigma**2)*dt+sigma*np.sqrt(dt)*Z.view(-1).numpy()),
-                             dtype=torch.float32).view(-1, 1)
-        return Z, exact
+        exact = S0*np.exp((mu-0.5*sigma**2)*dt+sigma*np.sqrt(dt)*Z.view(-1).numpy())
+        return torch.tensor(exact, dtype=torch.float32).view(-1, 1)
 
     def make_paths(self,
                    scheme: SchemeType,
@@ -134,20 +154,24 @@ class GBMDataset(DatasetBase):
         if n_paths is None:
             n_paths = self.n
         if Z is None:
-            Z = standardise(torch.randn(n_paths, n_steps))
+            Z = standardise(torch.randn(n_paths, n_steps), dtype=torch.float32)
         else:
             assert Z.size(1) == n_steps, 'Increments must be of size n_steps'
 
-        mu = params['mu']
-        sigma = params['sigma']
-        S0 = params['S0']
-        dt = params['dt']
+        if scheme is SchemeType.GBM_EXACT:
+            Z, paths = self.exact_paths(params=params, Z=Z)
+        else:
+            mu = params['mu']
+            sigma = params['sigma']
+            S0 = params['S0']
+            dt = params['dt']
 
-        paths = torch.zeros(n_paths, n_steps+1)
-        paths[:, 0] = S0
+            paths = torch.zeros(n_paths, n_steps+1, dtype=torch.float32)
+            paths[:, 0] = float(S0)
 
-        for n in range(n_steps):
-            paths[:, n+1] = self._path_step(paths[:, n], mu, sigma, dt, Z[:, n], scheme=scheme)
+            for n in range(n_steps):
+                paths[:, n+1] = self._path_step(paths[:, n], mu, sigma, dt, Z[:, n], scheme=scheme)
+
         return Z, paths
 
     def generate_train_test(self) -> Tuple[Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, torch.Tensor]]:

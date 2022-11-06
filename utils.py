@@ -124,7 +124,9 @@ def cond_dict_to_cart_prod(d: dict) -> List[Dict[str, float]]:
 
     # Handle the trivial case of single vector
     if len(vecs) == 1:
-        return d
+        for el in vecs[0]:
+            prod_list.append({keys[0]: el})
+        return prod_list
 
     ctr_range = list(range(len(vecs)))
     ctr_range.pop(0)

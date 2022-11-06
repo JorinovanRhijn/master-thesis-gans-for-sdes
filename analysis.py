@@ -73,7 +73,7 @@ class Analysis:
             if 'S0' in condition_dict.keys():
                 S0 = condition_dict['S0']
             else:
-                S0 = self.dataset.test_params['S0']
+                S0 = self.dataset.DEFAULT_PARAMS['S0']
         return S0
 
     def _gen_and_proc_output(self, condition_dict: dict, generator: Generator, raw_output: bool) -> torch.Tensor:
@@ -89,15 +89,15 @@ class Analysis:
         return output
 
     @staticmethod
-    def _kde_wrapper(vec):
-        f = FFTKDE(kernel='gaussian', bw='silverman').fit(vec)
+    def kde_wrapper(vec, kernel='gaussian', bw='silverman'):
+        f = FFTKDE(kernel=kernel, bw=bw).fit(vec)
         return f
 
     def _get_est_method(self, t: PlotType):
         if t is PlotType.ECDF:
             return smd.ECDF
         elif t is PlotType.KDE:
-            return self._kde_wrapper
+            return self.kde_wrapper
         else:
             raise ValueError
 
@@ -172,5 +172,3 @@ class Analysis:
         return ax
 
 
-    # def iter_plot(self):
-    #     pass

@@ -14,6 +14,7 @@ def make_gan_paths(data: DatasetBase,
                    Z: torch.Tensor = None,
                    n_paths: int = None,
                    proc_type: PreProcessing = None,
+                   S_ref: float = None,
                    device: str = 'cpu'):
     '''
     Method to make GAN paths: iterates the generator n_steps times to create n_paths paths. \n
@@ -25,6 +26,8 @@ def make_gan_paths(data: DatasetBase,
     else:
         assert list(data.test_params.keys()) == list(C.keys()), 'Condition keys provided in C must equal the test conditions\
              in the dataset.'
+    if proc_type is PreProcessing.SCALE_S_REF:
+        assert S_ref is not None, 'Must specify S_ref'
     if 'S0' not in list(C.keys()):
         print('Note: S0 was not in the test condition.')
     # Ensure the test parameters overlap those specified in params
@@ -53,12 +56,12 @@ def make_gan_paths(data: DatasetBase,
             C_tensor[:, S_index] = S_GAN[:, k]
             input_G = torch.cat((Z[:, k].view(-1, 1), C_tensor), axis=1).to(device)
             S_GAN[:, k+1] = postprocess(G(input_G).detach().view(-1).cpu(), X_prev=S_GAN[:, k].view(-1),
-                                        proc_type=proc_type, S_ref=params['S_bar']).view(-1)
+                                        proc_type=proc_type, S_ref=S_ref).view(-1)
     else:
         # Initialise the condition tensor
         for k in range(n_steps):
             input_G = torch.cat((Z[:, k].view(-1, 1), C_tensor), axis=1).to(device)
             S_GAN[:, k+1] = postprocess(G(input_G).detach().view(-1).cpu(), X_prev=S_GAN[:, k].view(-1),
-                                        proc_type=proc_type, S_ref=params['S_bar']).view(-1)
+                                        proc_type=proc_type, S_ref=S_ref).view(-1)
 
     return S_GAN

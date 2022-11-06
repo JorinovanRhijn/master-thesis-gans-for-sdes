@@ -38,11 +38,13 @@ class DistributionType(Enum):
 class SchemeType(Enum):
     GBM_EULER = auto()
     GBM_MILSTEIN = auto()
+    GBM_EXACT = auto()
     CIR_TRUNC_EULER = auto()
     CIR_TRUNC_EULER_FULL = auto()
     CIR_REFL_EULER = auto()
     CIR_MILSTEIN_TRUNC = auto()
     CIR_MILSTEIN_HEFTER = auto()
+    CIR_EXACT = auto()
 
 
 @dataclass
@@ -117,7 +119,7 @@ class MetaParameters:
 
     @property
     def preset(self):
-        _presets = dict(GBM=Preset.GBM,
+        _presets = dict(gbm=Preset.GBM,
                         cir_feller_satisfied=Preset.CIR_FELLER_SATISFIED,
                         cir_feller_violated_low_gamma=Preset.CIR_FELLER_VIOLATED_LOW_GAMMA,
                         cir_feller_violated_high_gamma=Preset.CIR_FELLER_VIOLATED_HIGH_GAMMA,)
