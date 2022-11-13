@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import statsmodels.distributions as smd
 from data_types import Config
-from typing import Union, List, Dict
+from typing import Union, List, Tuple, Dict
 from data import DatasetBase
 from nets import Generator, Discriminator
 from utils import make_test_tensor, get_plot_bounds, cond_dict_to_cart_prod
@@ -171,4 +171,11 @@ class Analysis:
             ax.set_xlabel("$S_t$")
         return ax
 
-
+    def discriminator_heatmap(self,
+                              discriminator: Discriminator,
+                              condition_dict: dict,
+                              res: int = 500,
+                              n_plot: int = 100,
+                              xlims: Tuple[float] = None,
+                              ylims: Tuple[float] = None):
+        pass

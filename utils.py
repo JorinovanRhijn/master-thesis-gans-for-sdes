@@ -136,3 +136,9 @@ def cond_dict_to_cart_prod(d: dict) -> List[Dict[str, float]]:
         prod_list = all_comb_two_dicts(prod_list, to_dict_singletons(vecs[i], keys[i]))
 
     return prod_list
+
+
+def two_dim_Cartesian_pairs(a, b):
+    '''Rewrite the Cartesian product between two vectors a and b as pairs (x_i, x_j).'''
+    A, B = np.meshgrid(a, b)
+    return np.concatenate((A.reshape(-1, 1), B.reshape(-1, 1)), axis=1)
